@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cashier_app/data/product_data.dart';
 
+
 class TestView extends StatefulWidget {
   const TestView({super.key});
 
@@ -14,94 +15,57 @@ class _TestViewState extends State<TestView> {
     return Center(
       child: Stack(
         children: [
-          Table(
-            border: TableBorder.all(),
-            columnWidths: const {
-              0: FlexColumnWidth(),
-              1: FlexColumnWidth(),
-              2: FlexColumnWidth(),
-              3: FlexColumnWidth(),
-            },
-            children: [
-              // Header row
-              TableRow(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      'Qty',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      'Item',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      'Price',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      'Total',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
+    
+   Table(
+  border: TableBorder.all(),
+  columnWidths: const {
+    0: FlexColumnWidth(),
+    1: FlexColumnWidth(),
+    2: FlexColumnWidth(),
+    3: FlexColumnWidth(),
+  },
+  children: [
+    // Header row
+    TableRow(
+      children: [
+        Padding(padding: EdgeInsets.all(8), child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
+      ],
+    ),
 
-              // Product rows
-              TableRow(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      '',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      '',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
+    // Product rows
+   TableRow(
+        children: [
+          Padding(padding: EdgeInsets.all(8), child: Text('', style: TextStyle(fontWeight: FontWeight.bold))),
+            Padding(padding: EdgeInsets.all(8), child: Text('', style: TextStyle(fontWeight: FontWeight.bold))),
+     
+       Padding(padding: EdgeInsets.all(8), child: Text('', style: TextStyle(fontWeight: FontWeight.bold))),
+     
+       Padding(padding: EdgeInsets.all(8), child: Text('', style: TextStyle(fontWeight: FontWeight.bold))),
+     
+     
 
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      '',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-
-                  Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text(
-                      '',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
         ],
       ),
+
+  ],
+),
+        ],
+    
+      ),
+      
     );
   }
 }
+  
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
+
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +106,7 @@ class HomeView extends StatelessWidget {
                 ),
               ),
             ],
+            
           ),
           SizedBox(height: 20),
           Row(
@@ -159,7 +124,9 @@ class HomeView extends StatelessWidget {
                     );
                   },
                   style: TextStyle(fontSize: 16, color: Colors.black),
-                  decoration: InputDecoration(hintText: 'test'),
+                  decoration: InputDecoration(
+                    hintText: 'test',
+                  ),
                 ),
               ),
             ],
@@ -175,6 +142,19 @@ class HomeView extends StatelessWidget {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 class SupplyModal extends StatefulWidget {
   const SupplyModal({super.key});
@@ -199,92 +179,56 @@ class _SupplyModalState extends State<SupplyModal> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(height: 40),
-
+      
                   Text(
                     'Supply',
                     style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
-
+      
                   SizedBox(height: 20),
-
-                  Table(
-                    border: TableBorder.all(),
-                    columnWidths: const {
-                      0: FlexColumnWidth(),
-                      1: FlexColumnWidth(),
-                      2: FlexColumnWidth(),
-                      3: FlexColumnWidth(),
-                    },
-                    children: [
-                      TableRow(
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                              'Qty',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                              'Item',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                              'Price',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Padding(
-                            padding: EdgeInsets.all(8),
-                            child: Text(
-                              'Total',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Product rows
-                      ...products.map((p) {
-                        return TableRow(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Text(p.qty.toString()),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Text(p.name),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Text('${p.price}'),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(8),
-                              child: Text('${p.total}'),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ],
-                  ),
-
+      
+                 Table(
+  border: TableBorder.all(),
+  columnWidths: const {
+    0: FlexColumnWidth(),
+    1: FlexColumnWidth(),
+    2: FlexColumnWidth(),
+    3: FlexColumnWidth(),
+  },
+  children: [
+    TableRow(
+      children: [
+        Padding(padding: EdgeInsets.all(8), child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Price', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
+      ],
+    ),
+ // Product rows
+    ...products.map((p) {
+      return TableRow(
+        children: [
+          Padding(padding: EdgeInsets.all(8), child: Text(p.qty.toString())),
+          Padding(padding: EdgeInsets.all(8), child: Text(p.name)),
+          Padding(padding: EdgeInsets.all(8), child: Text('${p.price}')),
+          Padding(padding: EdgeInsets.all(8), child: Text('${p.total}')),
+        ],
+      );
+    }).toList(),
+  ],
+),
+      
                   Expanded(child: Container()),
                   Text('Total: 10'),
-
+      
                   // Text("Total: 10", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold));
                   SizedBox(height: 10),
-
+      
                   SizedBox(height: 40),
                 ],
               ),
             ),
-
+      
             // ✅ CLOSE BUTTON FLOATING & OVERLAPPING
             Positioned(
               top: -20, // goes OUTSIDE the modal
