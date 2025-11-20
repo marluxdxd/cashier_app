@@ -11,3 +11,4 @@ class Product {
 
   double get total => qty * price; // calculate total for this product
 }
+
