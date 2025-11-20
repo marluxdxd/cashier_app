@@ -1,6 +1,11 @@
+import 'package:cashier_app/database/sale_service.dart';
+import 'package:cashier_app/home/view/sales_history.dart';
+import 'package:cashier_app/home/view/sales_report.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/home/viewModel/row.dart';
 import 'package:cashier_app/data/row_data.dart';
+import 'package:cashier_app/home/viewModel/sale.dart';
+import 'package:cashier_app/widget/app_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/data/product_data.dart';
 
@@ -15,36 +20,59 @@ class _TestViewState extends State<TestView> {
   Product? selectedProduct;
   int qty = 0;
 
-  int get totalBill {
-  int sum = 0;
+  
 
-  for (var row in rows) {
-    final price = row.product?.price ?? 0;   // double or int
-    sum += row.qty * price.toInt();
+  int get totalBill {
+    int sum = 0;
+
+    for (var row in rows) {
+      final price = row.product?.price ?? 0; // double or int
+      sum += row.qty * price.toInt();
+    }
+
+    return sum;
   }
 
-  return sum;
-}
+  TextEditingController customerController = TextEditingController();
 
+  int get change {
+    int customerCash = int.tryParse(customerController.text) ?? 0;
+    return customerCash - totalBill;
+  }
 
-TextEditingController customerController = TextEditingController();
+  // ✅ PUT THE FUNCTION HERE
+  void saveTransaction() async {
+    final service = SaleService();
 
-int get change {
-  int customerCash = int.tryParse(customerController.text) ?? 0;
-  return customerCash - totalBill;
-}
+    for (var row in rows) {
+      if (row.product != null && row.qty > 0) {
+        final sale = Sale(
+          productName: row.product!.name,
+          qty: row.qty,
+          price: row.product!.price.toInt(),
+          total: row.qty * row.product!.price.toInt(),
+          date: DateTime.now().toIso8601String(),
+        );
 
+        await service.insertSale(sale);
+      }
+    }
+
+    // ⭐ Clear rows after saving
+    setState(() {
+      rows.clear();
+      rows.add(RowData()); // Add an empty new row
+      customerController.clear();
+    });
+
+    print("✔ Transaction saved & rows cleared");
+  }
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.only(
-          top: 100.0,
-          left: 10.0,
-          right: 10.0,
-    
-        ),
+        padding: EdgeInsets.only(top: 100.0, left: 10.0, right: 10.0),
         child: Column(
           children: [
             Table(
@@ -121,7 +149,7 @@ int get change {
                         onChanged: (value) {
                           setState(() {
                             row.product = value;
-                            bool isLastRow = row == rows.last;
+                            bool isLastRow = row == rows.last;  
 
                             if (isLastRow) {
                               rows.add(RowData());
@@ -150,32 +178,37 @@ int get change {
                 }).toList(),
               ],
             ),
-             Text(
-        'Total Bill: $totalBill',
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-      ),
+            Text(
+              'Total Bill: $totalBill',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
 
-      SizedBox(height: 20),
+            SizedBox(height: 20),
 
-TextField(
-  controller: customerController,
-  keyboardType: TextInputType.number,
-  decoration: InputDecoration(
-    labelText: "Customer Cash",
-    border: OutlineInputBorder(),
-  ),
-  onChanged: (_) {
-    setState(() {}); // refresh UI whenever user types
-  },
-),
+            TextField(
+              controller: customerController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: "Customer Cash",
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (_) {
+                setState(() {}); // refresh UI whenever user types
+              },
+            ),
 
-SizedBox(height: 10),
+            SizedBox(height: 10),
 
-Text(
-  "Change: $change",
-  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-),
+            Text(
+              "Change: $change",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
 
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: saveTransaction,
+              child: Text("Save to Database"),
+            ),
           ],
         ),
       ),
@@ -201,173 +234,26 @@ class HomeView extends StatelessWidget {
         centerTitle: true,
       ),
 
+      // ⭐ ADD DRAWER HERE
+      drawer: AppDrawer(),
+
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text('Price Check:'),
-              SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  readOnly: true,
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (context) => SupplyModal(),
-                    );
-                  },
-                  style: TextStyle(fontSize: 16, color: Colors.black),
-                  decoration: InputDecoration(hintText: 'Click to enter'),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          Row(
-            children: [
-              Text('Test:'),
-              SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  readOnly: true,
-                  onTap: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (context) => TestView(),
-                    );
-                  },
-                  style: TextStyle(fontSize: 16, color: Colors.black),
-                  decoration: InputDecoration(hintText: 'test'),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          Text('Quantity'),
-          SizedBox(height: 20),
-          Text('Date'),
-          SizedBox(height: 20),
-          Text('Balance'),
+              Text(
+                'test'),
+
+                
+
+                
+                ]),
+          
         ],
       ),
     );
   }
 }
 
-class SupplyModal extends StatefulWidget {
-  const SupplyModal({super.key});
 
-  @override
-  State<SupplyModal> createState() => _SupplyModalState();
-}
-
-class _SupplyModalState extends State<SupplyModal> {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      child: SizedBox(
-        height: 700,
-        child: Stack(
-          clipBehavior: Clip.none, // IMPORTANT for overlap!
-          children: [
-            // MAIN CONTENT
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 40),
-
-                  Text(
-                    'Supply',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-
-                  SizedBox(height: 20),
-
-                  Table(
-                    border: TableBorder.all(),
-                    columnWidths: const {
-                      0: FlexColumnWidth(),
-                      1: FlexColumnWidth(),
-                      2: FlexColumnWidth(),
-                      3: FlexColumnWidth(),
-                    },
-                    children: [
-                      TableRow(
-                        children: [
-                          Text(
-                            'Qty',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-
-                          Text(
-                            'Item',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-
-                          Text(
-                            'Price',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-
-                          Text(
-                            'Total',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      // Product rows
-                      ...products.map((p) {
-                        return TableRow(
-                          children: [
-                            Text(p.qty.toString()),
-
-                            Text(p.name),
-
-                            Text('${p.price}'),
-
-                            Text('${p.total}'),
-                          ],
-                        );
-                      }).toList(),
-                    ],
-                  ),
-
-                  Expanded(child: Container()),
-
-                  // Text('Total: 10'),
-                  Text(
-                    "Total: 101",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
-
-                  SizedBox(height: 40),
-                ],
-              ),
-            ),
-
-            // ✅ CLOSE BUTTON FLOATING & OVERLAPPING
-            Positioned(
-              top: -20, // goes OUTSIDE the modal
-              left: 270, // start position
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  shape: StadiumBorder(),
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  elevation: 4,
-                ),
-                child: Text("Close"),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
