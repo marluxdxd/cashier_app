@@ -38,11 +38,11 @@ class AppDrawer extends StatelessWidget {
             title: Text("POS / Cashier"),
             onTap: () {
               Navigator.pop(context);
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) => TestView(),
-              );
+              showDialog(
+                  barrierColor: Colors.black.withOpacity(0.2),
+                  context: context,
+                  builder: (context) => TestView(),
+                );
             },
           ),
 

@@ -1,8 +1,10 @@
 import 'package:cashier_app/database/app_db.dart';
+import 'package:cashier_app/database/database_backup.dart';
 import 'package:cashier_app/database/sale_service.dart';
 import 'package:cashier_app/home/view/product_form.dart';
 import 'package:cashier_app/home/view/product_list_view.dart';
 import 'package:cashier_app/home/view/product_search.dart';
+import 'package:cashier_app/home/view/product_stock.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/home/viewModel/row.dart';
 import 'package:cashier_app/data/row_data.dart';
@@ -18,6 +20,7 @@ class TestView extends StatefulWidget {
 }
 
 class _TestViewState extends State<TestView> {
+  bool transactionSaved = false;
   Product? selectedProduct;
   int qty = 0;
   List<Product> dbProducts = [];
@@ -26,14 +29,6 @@ class _TestViewState extends State<TestView> {
     super.initState();
     loadProducts();
   }
-
-  // void loadProducts() async {
-  //   await AppDB.instance.seedDefaultProducts(); // Seed if empty
-  //   final productsFromDB = await AppDB.instance.fetchProducts();
-  //   setState(() {
-  //     dbProducts = productsFromDB;
-  //   });
-  // }
 
   void loadProducts() async {
     await AppDB.instance.seedDefaultProducts();
@@ -63,6 +58,9 @@ class _TestViewState extends State<TestView> {
 
   // ✅ PUT THE FUNCTION HERE
   void saveTransaction() async {
+     if (transactionSaved) return; // prevent multiple saves
+  transactionSaved = true;
+    
     final service = SaleService();
 
     for (var row in rows) {
@@ -78,22 +76,47 @@ class _TestViewState extends State<TestView> {
         await service.insertSale(sale);
       }
     }
-
+    int finalChange = change; // calculate before clearing data
     // ⭐ Clear rows after saving
     setState(() {
       rows.clear();
       rows.add(RowData()); // Add an empty new row
       customerController.clear();
+       transactionSaved = false; // ready for next transaction
     });
 
     print("✔ Transaction saved & rows cleared");
+    Navigator.of(context).pop();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Center(
+          child: Column(
+            children: [
+              Text('Sukli'),
+              Text(
+                "$finalChange",
+                style: TextStyle(fontSize: 100, color: Colors.red),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          // TextButton(
+          //   onPressed: () => Navigator.pop(context),
+          //   child: Text("OK"),
+          // )
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.only(top: 100.0, left: 10.0, right: 10.0),
+    return AlertDialog(
+      title: Center(child: Text('Customer')),
+      content: Form(
         child: Column(
           children: [
             Table(
@@ -156,28 +179,29 @@ class _TestViewState extends State<TestView> {
                       ),
 
                       // Item Dropdown (ITEM)
-                    DropdownButton<Product>(
-  value: row.product,  // Ensure this value matches one of the products in the items list
-  isExpanded: true,
-  underline: SizedBox(),
-  hint: Text("Select item"),
-  items: dbProducts.map((p) {
-    return DropdownMenuItem<Product>(
-      value: p,  // Set the value as the product instance
-      child: Text(p.name),
-    );
-  }).toList(),
-  onChanged: (value) {
-    setState(() {
-      row.product = value;  // Ensure that the value is correctly set to the selected product
-      bool isLastRow = row == rows.last;
-      if (isLastRow) {
-        rows.add(RowData());  // Add new empty row
-      }
-    });
-  },
-),
-
+                      DropdownButton<Product>(
+                        value: row
+                            .product, // Ensure this value matches one of the products in the items list
+                        isExpanded: true,
+                        underline: SizedBox(),
+                        hint: Text("Select item"),
+                        items: dbProducts.map((p) {
+                          return DropdownMenuItem<Product>(
+                            value: p, // Set the value as the product instance
+                            child: Text(p.name),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            row.product =
+                                value; // Ensure that the value is correctly set to the selected product
+                            bool isLastRow = row == rows.last;
+                            if (isLastRow) {
+                              rows.add(RowData()); // Add new empty row
+                            }
+                          });
+                        },
+                      ),
 
                       // Price
                       Text(row.product?.price.toString() ?? '0'),
@@ -186,14 +210,17 @@ class _TestViewState extends State<TestView> {
                       Text((row.qty * (row.product?.price ?? 0)).toString()),
 
                       // DELETE BUTTON
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          setState(() {
-                            rows.remove(row); // remove the row from the list
-                          });
-                        },
-                      ),
+                     IconButton(
+  icon: Icon(Icons.delete, color: Colors.red),
+  onPressed: () {
+    setState(() {
+      if (rows.length > 1) {
+        rows.remove(row); // remove the row from the list
+      }
+    });
+  },
+),
+
                     ],
                   );
                 }).toList(),
@@ -206,30 +233,37 @@ class _TestViewState extends State<TestView> {
 
             SizedBox(height: 20),
 
-            TextField(
-              controller: customerController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: "Customer Cash",
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (_) {
-                setState(() {}); // refresh UI whenever user types
-              },
-            ),
+          TextField(
+  controller: customerController,
+  keyboardType: TextInputType.number,
+  decoration: InputDecoration(
+    labelText: "Customer Cash",
+    border: OutlineInputBorder(),
+  ),
+  onChanged: (value) {
+    setState(() {}); // refresh change display
 
-            SizedBox(height: 10),
+    int customerCash = int.tryParse(value) ?? 0;
 
-            Text(
-              "Change: $change",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+    if (totalBill == 0) return; // no products, do nothing
 
-            SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: saveTransaction,
-              child: Text("Save to Database"),
-            ),
+    if (customerCash < totalBill) {
+      // Optional: you can show a warning if cash is insufficient
+      print("Cash is not enough yet.");
+      return; // do not proceed
+    }
+
+    if (!transactionSaved) {
+      saveTransaction(); // auto save
+    }
+  },
+),
+
+
+
+    
+
+          
           ],
         ),
       ),
@@ -273,7 +307,7 @@ class HomeView extends StatelessWidget {
               child: Text("Search products"),
             ),
             SizedBox(height: 50),
-           
+
             GestureDetector(
               onTap: () {
                 showDialog(
@@ -300,9 +334,59 @@ class HomeView extends StatelessWidget {
               child: Text("View All Products"),
             ),
             SizedBox(height: 50),
-            Text('stock'),
+             GestureDetector(
+              onTap: () {
+                showDialog(
+                  barrierColor: Colors.black.withOpacity(0.2),
+                  context: context,
+                  builder: (context) => ProductStock(),
+                );
+              },
+              child: Text("Stock"),
+            ),
+            SizedBox(height: 50),
+            Column(
+              
+  children: [
+    
+    ElevatedButton(
+  onPressed: () async {
+    try {
+      await DatabaseBackup.backupDatabase();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Database backed up!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Backup failed: $e")),
+      );
+    }
+  },
+  child: Text("Backup Database"),
+),
+ElevatedButton(
+  onPressed: () async {
+    try {
+      await DatabaseBackup.restoreDatabase();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Database restored!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Restore failed: $e")),
+      );
+    }
+  },
+  child: Text("Restore Database"),
+),
+
+  ],
+)
+
+            
           ],
         ),
+      
       ),
     );
   }

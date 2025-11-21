@@ -1,7 +1,7 @@
-
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+
 
 class AppDB {
   static final AppDB instance = AppDB._init();
@@ -21,27 +21,57 @@ class AppDB {
 
     return await openDatabase(
       path,
-      version: 2, // Update the version to trigger onUpgrade
+      version: 3,
       onCreate: _createDB,
-      onUpgrade: _onUpgrade, // Handle database upgrade
+      onUpgrade: _onUpgrade,
     );
   }
 
-  // Create the DB with the initial schema (without qty column)
+  // Create ALL required tables
   Future _createDB(Database db, int version) async {
-    await db.execute('''CREATE TABLE products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      price INTEGER,
-      qty INTEGER DEFAULT 0  -- Add the qty column here
-    )''');
+    await db.execute('''
+      CREATE TABLE products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        price INTEGER,
+        qty INTEGER DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        productName TEXT,
+        qty INTEGER,
+        price INTEGER,
+        total INTEGER,
+        date TEXT
+      )
+    ''');
   }
 
-  // Handle upgrading the DB schema when version changes
+  // Auto-upgrade if tables do not exist
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      // Check if qty column exists. If not, add it.
-      await db.execute('ALTER TABLE products ADD COLUMN qty INTEGER DEFAULT 0');
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          price INTEGER,
+          qty INTEGER DEFAULT 0
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sales (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          productName TEXT,
+          qty INTEGER,
+          price INTEGER,
+          total INTEGER,
+          date TEXT
+        )
+      ''');
     }
   }
 
@@ -50,7 +80,7 @@ class AppDB {
     db.close();
   }
 
-  // Insert a product into the database
+  // Insert a product
   Future<int> insertProduct(Product product) async {
     final db = await instance.database;
     return await db.insert('products', {
@@ -60,10 +90,11 @@ class AppDB {
     });
   }
 
-  // Fetch all products from the database
+  // Fetch all products
   Future<List<Product>> fetchProducts() async {
     final db = await instance.database;
     final result = await db.query('products');
+
     return result.map((row) {
       return Product(
         id: row['id'] as int?,
@@ -74,7 +105,7 @@ class AppDB {
     }).toList();
   }
 
-  // Update product in the database
+  // Update product
   Future<void> updateProduct(Product product) async {
     final db = await instance.database;
     await db.update(
@@ -82,14 +113,14 @@ class AppDB {
       {
         'name': product.name,
         'price': product.price.toInt(),
-        'qty': product.qty,  // Update qty here
+        'qty': product.qty,
       },
       where: 'id = ?',
       whereArgs: [product.id],
     );
   }
 
-  // Delete product from the database
+  // Delete product
   Future<void> deleteProduct(int productId) async {
     final db = await instance.database;
     await db.delete(
@@ -98,11 +129,6 @@ class AppDB {
       whereArgs: [productId],
     );
   }
-    Future<void> seedDefaultProducts() async {}
 
-
+  Future<void> seedDefaultProducts() async {}
 }
-
-
-
-

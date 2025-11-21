@@ -8,8 +8,9 @@ class SaleService {
   }
 
   Future<List<Sale>> getSales() async {
-    final db = await AppDB.instance.database;
+  final db = await AppDB.instance.database;
 
+  try {
     final result = await db.query('sales');
 
     return result.map((json) => Sale(
@@ -20,7 +21,12 @@ class SaleService {
       total: json['total'] as int,
       date: json['date'] as String,
     )).toList();
+  } catch (e) {
+    print("getSales() error: $e");
+    return []; // return empty list to avoid crash
   }
+}
+
   Future<List<Sale>> getSalesByDay(DateTime day) async {
   final db = await AppDB.instance.database;
 
