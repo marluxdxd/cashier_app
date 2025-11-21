@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cashier_app/database/app_db.dart';  // Import AppDB for fetching products
-import 'package:cashier_app/home/viewModel/product.dart';  // Import the Product class
+import 'package:cashier_app/database/app_db.dart'; // Import AppDB for fetching products
+import 'package:cashier_app/home/viewModel/product.dart'; // Import the Product class
 
 class SearchProduct extends StatefulWidget {
   const SearchProduct({super.key});
@@ -10,14 +10,15 @@ class SearchProduct extends StatefulWidget {
 }
 
 class _SearchProductState extends State<SearchProduct> {
-  List<Product> products = [];  // List to hold all products
-  List<Product> filteredProducts = [];  // List for filtered products based on search
+  List<Product> products = []; // List to hold all products
+  List<Product> filteredProducts =
+      []; // List for filtered products based on search
   TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    loadProducts();  // Fetch products when the widget is initialized
+    loadProducts(); // Fetch products when the widget is initialized
   }
 
   // Fetch all products from the database
@@ -25,7 +26,7 @@ class _SearchProductState extends State<SearchProduct> {
     final productsFromDB = await AppDB.instance.fetchProducts();
     setState(() {
       products = productsFromDB;
-      filteredProducts = products;  // Initially, show all products
+      filteredProducts = products; // Initially, show all products
     });
   }
 
@@ -36,14 +37,18 @@ class _SearchProductState extends State<SearchProduct> {
     }).toList();
 
     setState(() {
-      filteredProducts = filtered;  // Update filtered products
+      filteredProducts = filtered; // Update filtered products
     });
   }
 
   // Edit product function
   void editProduct(Product product) {
-    TextEditingController nameController = TextEditingController(text: product.name);
-    TextEditingController priceController = TextEditingController(text: product.price.toString());
+    TextEditingController nameController = TextEditingController(
+      text: product.name,
+    );
+    TextEditingController priceController = TextEditingController(
+      text: product.price.toString(),
+    );
 
     showDialog(
       context: context,
@@ -69,9 +74,10 @@ class _SearchProductState extends State<SearchProduct> {
               onPressed: () {
                 setState(() {
                   product.name = nameController.text;
-                  product.price = double.tryParse(priceController.text) ?? product.price;
+                  product.price =
+                      double.tryParse(priceController.text) ?? product.price;
                 });
-                AppDB.instance.updateProduct(product);  // Update product in DB
+                AppDB.instance.updateProduct(product); // Update product in DB
                 Navigator.pop(context);
               },
               child: Text("Save"),
@@ -105,8 +111,8 @@ class _SearchProductState extends State<SearchProduct> {
             // Confirm button - proceeds with deletion
             TextButton(
               onPressed: () {
-                deleteProduct(product.id!);  // Delete the product if confirmed
-                Navigator.pop(context);  // Close the dialog after deletion
+                deleteProduct(product.id!); // Delete the product if confirmed
+                Navigator.pop(context); // Close the dialog after deletion
               },
               child: Text('Delete'),
             ),
@@ -123,16 +129,13 @@ class _SearchProductState extends State<SearchProduct> {
       filteredProducts.removeWhere((product) => product.id == productId);
     });
 
-    AppDB.instance.deleteProduct(productId);  // Delete from DB
+    AppDB.instance.deleteProduct(productId); // Delete from DB
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(
-        'Display all products',
-        style: TextStyle(fontSize: 10),
-      ),
+      title: Text('Display all products', style: TextStyle(fontSize: 10)),
       content: SizedBox(
         width: 500, // Adjust the width as needed
         child: SingleChildScrollView(
@@ -150,52 +153,58 @@ class _SearchProductState extends State<SearchProduct> {
                   ),
                 ),
                 onChanged: (value) {
-                  filterProducts(value);  // Filter products when search changes
+                  filterProducts(value); // Filter products when search changes
                 },
               ),
-              SizedBox(height: 15,),
+              SizedBox(height: 15),
 
               // Horizontal Scrollable Table header
               SingleChildScrollView(
-                scrollDirection: Axis.horizontal,  // Enable horizontal scrolling
+                scrollDirection: Axis.horizontal, // Enable horizontal scrolling
                 child: Table(
                   border: TableBorder.all(color: Colors.grey),
-                  columnWidths: const {
-                    0: FixedColumnWidth(60), // Qty
-                    1: FlexColumnWidth(60), // Item
-                    2: FixedColumnWidth(60), // Price
-                    3: FixedColumnWidth(60), // Total
-                    4: FixedColumnWidth(120), // Action column width increased
+                  columnWidths: {
+                    0: IntrinsicColumnWidth(),
+                    1: IntrinsicColumnWidth(), // item auto expandss
+                    2: IntrinsicColumnWidth(),
+                    3: IntrinsicColumnWidth(),
+                    4: IntrinsicColumnWidth(),
                   },
                   children: [
                     TableRow(
                       decoration: BoxDecoration(color: Colors.white),
                       children: [
-                        Text('Qty', ),
-                        Text('Item',),
-                        Text('Price',),
-                        Text('Total',),
-                        Text('Action',),
+                        Text('Qty'),
+                        Text('Item'),
+                        Text('Price'),
+                        Text('Total'),
+                        Text('Action'),
                       ],
                     ),
                     // Display filtered products in rows
                     ...filteredProducts.map((product) {
                       return TableRow(
                         children: [
-                          Text(product.qty.toString()),  // Display Quantity
-                          Text(product.name),  // Display Item Name
-                          Text('₱${product.price}'),  // Display Price
-                          Text('₱${(product.qty * product.price)}'),  // Display Total
+                          Text(product.qty.toString()), // Display Quantity
+                          Text(product.name), // Display Item Name
+                          Text('₱${product.price}'), // Display Price
+                          Text(
+                            '₱${(product.qty * product.price)}',
+                          ), // Display Total
                           Row(
-                            mainAxisSize: MainAxisSize.min,  // Make sure the row doesn't take full width
+                            mainAxisSize: MainAxisSize
+                                .min, // Make sure the row doesn't take full width
                             children: [
                               IconButton(
                                 icon: Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => editProduct(product),  // Edit Product
+                                onPressed: () =>
+                                    editProduct(product), // Edit Product
                               ),
                               IconButton(
                                 icon: Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => confirmDeleteProduct(product),  // Show confirm delete dialog
+                                onPressed: () => confirmDeleteProduct(
+                                  product,
+                                ), // Show confirm delete dialog
                               ),
                             ],
                           ),
