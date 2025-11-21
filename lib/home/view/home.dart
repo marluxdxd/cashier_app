@@ -1,13 +1,14 @@
+import 'package:cashier_app/database/app_db.dart';
 import 'package:cashier_app/database/sale_service.dart';
-import 'package:cashier_app/home/view/sales_history.dart';
-import 'package:cashier_app/home/view/sales_report.dart';
+import 'package:cashier_app/home/view/product_form.dart';
+import 'package:cashier_app/home/view/product_list_view.dart';
+import 'package:cashier_app/home/view/product_search.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/home/viewModel/row.dart';
 import 'package:cashier_app/data/row_data.dart';
 import 'package:cashier_app/home/viewModel/sale.dart';
 import 'package:cashier_app/widget/app_drawer.dart';
 import 'package:flutter/material.dart';
-import 'package:cashier_app/data/product_data.dart';
 
 class TestView extends StatefulWidget {
   const TestView({super.key});
@@ -19,8 +20,28 @@ class TestView extends StatefulWidget {
 class _TestViewState extends State<TestView> {
   Product? selectedProduct;
   int qty = 0;
+  List<Product> dbProducts = [];
+  @override
+  void initState() {
+    super.initState();
+    loadProducts();
+  }
 
-  
+  // void loadProducts() async {
+  //   await AppDB.instance.seedDefaultProducts(); // Seed if empty
+  //   final productsFromDB = await AppDB.instance.fetchProducts();
+  //   setState(() {
+  //     dbProducts = productsFromDB;
+  //   });
+  // }
+
+  void loadProducts() async {
+    await AppDB.instance.seedDefaultProducts();
+    final productsFromDB = await AppDB.instance.fetchProducts();
+    setState(() {
+      dbProducts = productsFromDB;
+    });
+  }
 
   int get totalBill {
     int sum = 0;
@@ -135,28 +156,28 @@ class _TestViewState extends State<TestView> {
                       ),
 
                       // Item Dropdown (ITEM)
-                      DropdownButton<Product>(
-                        value: row.product,
-                        isExpanded: true,
-                        underline: SizedBox(),
-                        hint: Text("Select item"),
-                        items: products.map((p) {
-                          return DropdownMenuItem(
-                            value: p,
-                            child: Text(p.name),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            row.product = value;
-                            bool isLastRow = row == rows.last;  
+                    DropdownButton<Product>(
+  value: row.product,  // Ensure this value matches one of the products in the items list
+  isExpanded: true,
+  underline: SizedBox(),
+  hint: Text("Select item"),
+  items: dbProducts.map((p) {
+    return DropdownMenuItem<Product>(
+      value: p,  // Set the value as the product instance
+      child: Text(p.name),
+    );
+  }).toList(),
+  onChanged: (value) {
+    setState(() {
+      row.product = value;  // Ensure that the value is correctly set to the selected product
+      bool isLastRow = row == rows.last;
+      if (isLastRow) {
+        rows.add(RowData());  // Add new empty row
+      }
+    });
+  },
+),
 
-                            if (isLastRow) {
-                              rows.add(RowData());
-                            } // ADD NEW ROW HERE
-                          });
-                        },
-                      ),
 
                       // Price
                       Text(row.product?.price.toString() ?? '0'),
@@ -224,7 +245,7 @@ class HomeView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'honey sari-sari stores',
+          'Honey Sari-Sari Store',
           style: TextStyle(
             color: Colors.black,
             fontSize: 20,
@@ -237,23 +258,52 @@ class HomeView extends StatelessWidget {
       // ⭐ ADD DRAWER HERE
       drawer: AppDrawer(),
 
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'test'),
-
-                
-
-                
-                ]),
-          
-        ],
+      body: Center(
+        child: Column(
+          children: [
+            SizedBox(height: 50),
+            GestureDetector(
+              onTap: () {
+                showDialog(
+                  barrierColor: Colors.black.withOpacity(0.2),
+                  context: context,
+                  builder: (context) => SearchProduct(),
+                );
+              },
+              child: Text("Search products"),
+            ),
+            SizedBox(height: 50),
+           
+            GestureDetector(
+              onTap: () {
+                showDialog(
+                  barrierColor: Colors.black.withOpacity(0.2),
+                  context: context,
+                  builder: (context) => AddProduct(),
+                );
+              },
+              child: Text("Add products"),
+            ),
+            Table(children: [
+            
+          ],
+        ),
+            SizedBox(height: 50),
+            GestureDetector(
+              onTap: () {
+                // Navigate to ProductListView when the user taps this text
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProductListView()),
+                );
+              },
+              child: Text("View All Products"),
+            ),
+            SizedBox(height: 50),
+            Text('stock'),
+          ],
+        ),
       ),
     );
   }
 }
-
-
