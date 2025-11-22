@@ -84,14 +84,7 @@ class _SalesReportViewState extends State<SalesReportView> {
       body: Column(
         children: [
           // Predefined filters
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton(onPressed: loadDaily, child: Text("Daily")),
-              ElevatedButton(onPressed: loadWeekly, child: Text("Weekly")),
-              ElevatedButton(onPressed: loadMonthly, child: Text("Monthly")),
-            ],
-          ),
+       
 
           SizedBox(height: 10),
           Text(
@@ -139,7 +132,7 @@ class _SalesReportViewState extends State<SalesReportView> {
             ],
           ),
 
-          SizedBox(height: 10),
+
           Expanded(
             child: loading
                 ? Center(child: CircularProgressIndicator())
@@ -153,23 +146,78 @@ class _SalesReportViewState extends State<SalesReportView> {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8.0),
-                                child: Text(
+                              Text(
                                   DateFormat('MMM d, yyyy')
                                       .format(DateTime.parse(date)),
                                   style: TextStyle(
-                                      fontWeight: FontWeight.bold,
+                                      
                                       fontSize: 16),
                                 ),
-                              ),
-                              ...sales.map((s) => ListTile(
-                                    title: Text('${s.productName} - ${s.qty} pcs'),
-                                    trailing: Text('₱${s.total}'),
-                                  )),
+                              
+                          Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    // Header row
+    Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: const [
+        Expanded(child: Text('Item', style: TextStyle(fontWeight: FontWeight.bold))),
+        SizedBox(width: 40), // space for Qty
+        Expanded(child: Text('qty', style: TextStyle(fontWeight: FontWeight.bold))),
+        SizedBox(width: 100), // space for Qty
+        
+        Text('price', style: TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    ),
+    const SizedBox(height: 4), // optional spacing
+
+    // Sales rows
+    ...sales.map((s) => Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        
+         Text('${s.productName}  '),
+        Text(' ${s.qty} pcs'),
+        SizedBox(width: 40), // align with header
+        Text('₱${s.total}'),
+      ],
+    )),
+
+    const SizedBox(height: 8), // spacing before total
+
+    // Total row with top border
+    Padding(
+      padding: const EdgeInsets.only(right: 0.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: Colors.black,
+                  width: 1.0,
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.only(top: 4), // optional spacing above text
+            child: Text(
+              'total: ₱${sales.fold(0, (sum, s) => sum + s.total)}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  ],
+),
+
                               Divider(),
                             ],
+                            
                           );
                         }).toList(),
                       ),

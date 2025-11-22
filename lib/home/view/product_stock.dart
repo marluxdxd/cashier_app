@@ -3,10 +3,13 @@ import 'package:cashier_app/database/app_db.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 
 class ProductStock extends StatefulWidget {
-  const ProductStock({super.key});
+    final VoidCallback? onStockUpdated; // ✅ callback
+
+  const ProductStock({super.key, this.onStockUpdated});
 
   @override
   State<ProductStock> createState() => _ProductStockState();
+  
 }
 
 class _ProductStockState extends State<ProductStock> {
@@ -19,14 +22,16 @@ class _ProductStockState extends State<ProductStock> {
     super.initState();
     loadProducts();
   }
+  
 
-  void loadProducts() async {
-    final productsFromDB = await AppDB.instance.fetchProducts();
-    setState(() {
-      products = productsFromDB;
-      filteredProducts = products;
-    });
-  }
+Future<void> loadProducts() async {
+  final productsFromDB = await AppDB.instance.fetchProducts();
+  setState(() {
+    products = productsFromDB;
+    filteredProducts = products;
+  });
+}
+
 
   void filterProducts(String query) {
     final filtered = products.where((product) {
@@ -38,40 +43,50 @@ class _ProductStockState extends State<ProductStock> {
     });
   }
 
-  void editQty(Product product) {
-    TextEditingController qtyController =
-        TextEditingController(text: product.qty.toString());
+ void editQty(Product product) {
+  TextEditingController qtyController =
+      TextEditingController(text: product.qty.toString());
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Edit Quantity"),
-          content: TextField(
-            controller: qtyController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(labelText: "Quantity"),
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text("Edit Quantity"),
+        content: TextField(
+          controller: qtyController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(labelText: "Quantity"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              int newQty = int.tryParse(qtyController.text) ?? product.qty;
+
+              // ❗ Simply update the stock to newQty
+              product.qty = newQty;
+
+              // Update DB
+              await AppDB.instance.updateProduct(product);
+
+              // 🔥 Refresh product list immediately
+              await loadProducts();
+              filterProducts(searchController.text);
+
+              Navigator.pop(context);
+            },
+            child: Text("Save"),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  product.qty = int.tryParse(qtyController.text) ?? product.qty;
-                });
-                AppDB.instance.updateProduct(product); // Update DB
-                Navigator.pop(context);
-              },
-              child: Text("Save"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
-            ),
-          ],
-        );
-      },
-    );
-  }
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+
 
   @override
   Widget build(BuildContext context) {

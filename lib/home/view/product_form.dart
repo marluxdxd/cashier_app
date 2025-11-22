@@ -3,7 +3,9 @@ import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/database/app_db.dart';
 
 class AddProduct extends StatefulWidget {
-  const AddProduct({super.key});
+   final VoidCallback? onProductAdded;
+
+  const AddProduct({super.key, this.onProductAdded});
 
   @override
   State<AddProduct> createState() => _AddProductState();
@@ -14,18 +16,36 @@ class _AddProductState extends State<AddProduct> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
 
-  void saveProduct() async {
-    if (_formKey.currentState!.validate()) {
-      final product = Product(
-        name: nameController.text,
-        price: double.tryParse(priceController.text) ?? 0,
-      );
+void addProduct() async {
+  if (_formKey.currentState!.validate()) {
+    final product = Product(
+      name: nameController.text,
+      price: double.tryParse(priceController.text) ?? 0,
+    );
 
-      await AppDB.instance.insertProduct(product);
+    // Insert product into database
+    await AppDB.instance.insertProduct(product);
 
-      Navigator.pop(context); // Close the form
+    // 🔔 Notify parent to refresh immediately
+    if (widget.onProductAdded != null) {
+      widget.onProductAdded!();
     }
+
+    // ✅ Clear fields to add next product
+    nameController.clear();
+    priceController.clear();
+
+    // ✅ Optional: Focus back to the name field
+    FocusScope.of(context).requestFocus(FocusNode());
+    
+    // Show a small SnackBar or message for confirmation
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Product added! You can add another.')),
+    );
   }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -70,8 +90,8 @@ class _AddProductState extends State<AddProduct> {
           child: Text('Cancel'),
         ),
         ElevatedButton(
-          onPressed: saveProduct,
-          child: Text('Save'),
+          onPressed: addProduct,
+          child: Text('Add'),
         ),
       ],
     );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:cashier_app/database/app_db.dart';  // AppDB for fetching data
-import 'package:cashier_app/home/viewModel/product.dart';  // Product class
+import 'package:cashier_app/database/app_db.dart'; // AppDB for fetching data
+import 'package:cashier_app/home/viewModel/product.dart'; // Product class
 
 class ProductListView extends StatefulWidget {
   const ProductListView({super.key});
@@ -29,20 +29,29 @@ class _ProductListViewState extends State<ProductListView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("All Products"),
-      ),
+      appBar: AppBar(title: Text("All Products")),
       body: products.isEmpty
-          ? Center(child: CircularProgressIndicator())  // Show loader while fetching
+          ? Center(
+              child: CircularProgressIndicator(),
+            ) // Show loader while fetching
           : ListView.builder(
               itemCount: products.length,
               itemBuilder: (context, index) {
                 final product = products[index];
 
-                return ListTile(
-                  title: Text(product.name),  // Display product name
-                  subtitle: Text('Price: ₱${product.price.toString()}'),
-                  trailing: Text('ID: ${product.id ?? '-'}'),
+                return Padding(
+                  padding: const EdgeInsets.only(left: 75.0),
+
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      // Text('id:${product.id ?? '-'} '), // note the space after ID
+                      Text(product.name),
+                      Text(
+                        ' ₱${product.price.toString()}',
+                      ), // space before price
+                    ],
+                  ),
                 );
               },
             ),

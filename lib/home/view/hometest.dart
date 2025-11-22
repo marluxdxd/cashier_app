@@ -32,7 +32,7 @@ class _TestView1State extends State<TestView1> {
     loadProducts();
   }
 
-  void loadProducts() async {
+  Future<void> loadProducts() async {
     await AppDB.instance.seedDefaultProducts();
     final productsFromDB = await AppDB.instance.fetchProducts();
     setState(() {
@@ -58,65 +58,82 @@ class _TestView1State extends State<TestView1> {
     return customerCash - totalBill;
   }
 
-  // ✅ PUT THE FUNCTION HERE
- void saveTransaction() async {
-  if (transactionSaved) return; // prevent multiple saves
-  transactionSaved = true;
-
-  final service = SaleService();
-
-  for (var row in rows) {
-    if (row.product != null && row.qty > 0) {
-      // 1️⃣ Create Sale record
-      final sale = Sale(
-        productName: row.product!.name,
-        qty: row.qty,
-        price: row.product!.price.toInt(),
-        total: row.qty * row.product!.price.toInt(),
-        date: DateTime.now().toIso8601String(),
-      );
-
-      await service.insertSale(sale);
-
-      // 2️⃣ Reduce actual stock
-      row.product!.reduceStock(row.qty);
-
-      // 3️⃣ Update product in database with new stock
-      await AppDB.instance.updateProduct(row.product!);
-    }
+  void controllerClearCustomerCash() {
+    setState(() {
+      customerController.clear();
+    });
   }
 
-  int finalChange = int.tryParse(customerController.text)! - totalBill;
+  // ✅ PUT THE FUNCTION HERE
+  void saveTransaction() async {
+    if (transactionSaved) return;
+    transactionSaved = true;
 
-  // ⭐ Clear rows after saving
-  setState(() {
-    rows.clear();
-    rows.add(RowData()); // Add an empty new row
-    customerController.clear();
-    transactionSaved = false; // ready for next transaction
-  });
+    final service = SaleService();
 
-  print("✔ Transaction saved, stock updated & rows cleared");
-
-  // 4️⃣ Show change dialog
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: Center(
-        child: Column(
-          children: [
-            Text('Sukli'),
-            Text(
-              "$finalChange",
-              style: TextStyle(fontSize: 100, color: Colors.red),
+    for (var row in rows) {
+      if (row.product != null && row.qty > 0) {
+        try {
+          // ⭐ CHECK STOCK
+          row.product!.reduceStock(row.qty);
+        } catch (e) {
+          // ⭐ SHOW STOCK ERROR
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString().replaceAll("Exception:", "").trim()),
             ),
-          ],
+          );
+
+          // ⭐ CLEAR CUSTOMER CASH FIELD
+          controllerClearCustomerCash();
+
+          transactionSaved = false;
+          return;
+        }
+
+        // ⭐ SAVE SALE
+        final sale = Sale(
+          productName: row.product!.name,
+          qty: row.qty,
+          price: row.product!.price.toInt(),
+          total: row.qty * row.product!.price.toInt(),
+          date: DateTime.now().toIso8601String(),
+        );
+
+        await service.insertSale(sale);
+
+        // ⭐ UPDATE STOCK IN DATABASE
+        await AppDB.instance.updateProduct(row.product!);
+      }
+    }
+
+    int finalChange = int.tryParse(customerController.text)! - totalBill;
+
+    // ⭐ RESET UI AFTER SUCCESS
+    setState(() {
+      rows.clear();
+      rows.add(RowData());
+      customerController.clear();
+      transactionSaved = false;
+    });
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Center(
+          child: Column(
+            children: [
+              Text('Sukli'),
+              Text(
+                "$finalChange",
+                style: TextStyle(fontSize: 100, color: Colors.red),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,167 +162,148 @@ class _TestView1State extends State<TestView1> {
         ],
       ),
 
-      drawer: AppDrawer(),
+      // ✅ Wrap drawer with callback to refresh products
+      drawer: AppDrawer(
+        onProductAdded: () async {
+          await loadProducts(); // reload products after adding
+        },
+      ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            SizedBox(height: 100),
-            Table(
-              border: TableBorder.all(),
-              columnWidths: const {
-                0: FlexColumnWidth(),
-                1: FlexColumnWidth(),
-                2: FlexColumnWidth(),
-                3: FlexColumnWidth(),
-                4: FlexColumnWidth(),
-              },
-              children: [
-                // Header row
-                TableRow(
-                  children: [
-                    Text('Qty', style: TextStyle(fontWeight: FontWeight.bold)),
+      // ✅ Wrap body with RefreshIndicator
+      body: RefreshIndicator(
+        onRefresh: loadProducts, // called when user pulls down
 
-                    Text('Item', style: TextStyle(fontWeight: FontWeight.bold)),
-
-                    Text(
-                      'Price',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-
-                    Text(
-                      'Total',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-
-                    Text(
-                      'Action',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-
-                // Product rows
-                // Dynamic Rows
-                ...rows.map((row) {
-                  return TableRow(
+        child: SingleChildScrollView(
+          physics:
+              AlwaysScrollableScrollPhysics(), // allows scroll for RefreshIndicator
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              SizedBox(height: 100),
+              Table(
+                border: TableBorder.all(),
+                columnWidths: const {
+                  0: FlexColumnWidth(),
+                  1: FlexColumnWidth(),
+                  2: FlexColumnWidth(),
+                  3: FlexColumnWidth(),
+                  4: FlexColumnWidth(),
+                },
+                children: [
+                  // Header row
+                  TableRow(
                     children: [
-                      // Qty
-                      DropdownButton<int>(
-                        value: row.qty == 0 ? null : row.qty,
-                        isExpanded: true,
-                        underline: SizedBox(),
-                        hint: Text("0"),
-                        items: List.generate(50, (index) {
-                          int number = index + 1;
-                          return DropdownMenuItem(
-                            value: number,
-                            child: Text(number.toString()),
-                          );
-                        }),
-                        onChanged: (value) {
-                          setState(() {
-                            row.qty = value!;
-                          });
-                        },
+                      Text(
+                        'Qty',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-
-                      // Item Dropdown (ITEM)
-                      DropdownButton<Product>(
-                        value: row
-                            .product, // Ensure this value matches one of the products in the items list
-                        isExpanded: true,
-                        underline: SizedBox(),
-                        hint: Text("Select item"),
-                        items: dbProducts.map((p) {
-                          return DropdownMenuItem<Product>(
-                            value: p, // Set the value as the product instance
-                            child: Text(p.name),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            row.product =
-                                value; // Ensure that the value is correctly set to the selected product
-                            bool isLastRow = row == rows.last;
-                            if (isLastRow) {
-                              rows.add(RowData()); // Add new empty row
-                            }
-                          });
-                        },
+                      Text(
+                        'Item',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-
-                      // Price
-                      Text(row.product?.price.toString() ?? '0'),
-
-                      // Total (qty × price)
-                      Text((row.qty * (row.product?.price ?? 0)).toString()),
-
-                      // DELETE BUTTON
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          setState(() {
-                            if (rows.length > 1) {
-                              rows.remove(row); // remove the row from the list
-                            }
-                          });
-                        },
+                      Text(
+                        'Price',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Total',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Action',
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ],
-                  );
-                }).toList(),
-              ],
-            ),
+                  ),
 
-            Text(
-              'Total Bill: $totalBill',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+                  // Product rows
+                  ...rows.map((row) {
+                    return TableRow(
+                      children: [
+                        // Qty
+                        DropdownButton<int>(
+                          value: row.qty == 0 ? null : row.qty,
+                          isExpanded: true,
+                          underline: SizedBox(),
+                          hint: Text("0"),
+                          items: List.generate(50, (index) {
+                            int number = index + 1;
+                            return DropdownMenuItem(
+                              value: number,
+                              child: Text(number.toString()),
+                            );
+                          }),
+                          onChanged: (value) {
+                            setState(() {
+                              row.qty = value!;
+                            });
+                          },
+                        ),
 
-            SizedBox(height: 20),
-            CustomerCashField(
-              controller: customerController,
-              totalBill: totalBill,
-              transactionSaved: transactionSaved,
-              saveTransaction: saveTransaction,
-            ),
+                        // Item Dropdown
+                        DropdownButton<Product>(
+                          value: dbProducts.contains(row.product)
+                              ? row.product
+                              : null,
+                          isExpanded: true,
+                          underline: SizedBox(),
+                          hint: Text("Select item"),
+                          items: dbProducts.map((p) {
+                            return DropdownMenuItem<Product>(
+                              value: p,
+                              child: Text(p.name),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              row.product = value;
+                              if (row == rows.last)
+                                rows.add(RowData()); // add new row dynamically
+                            });
+                          },
+                        ),
 
-            SizedBox(height: 20),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SalesHistoryView(),
-                      ),
+                        // Price
+                        Text(row.product?.price.toString() ?? '0'),
+
+                        // Total
+                        Text((row.qty * (row.product?.price ?? 0)).toString()),
+
+                        // Delete Button
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              if (rows.length > 1) rows.remove(row);
+                            });
+                          },
+                        ),
+                      ],
                     );
-                  },
-                  child: Text("Sales History", style: TextStyle(fontSize: 16)),
-                ),
+                  }).toList(),
+                ],
+              ),
 
-                SizedBox(height: 20),
+              SizedBox(height: 10),
+              Text(
+                'Total Bill: $totalBill',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 20),
 
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SalesReportView(),
-                      ),
-                    );
-                  },
-                  child: Text("Sales Report", style: TextStyle(fontSize: 16)),
-                ),
-              ],
-            ),
-          ],
+              CustomerCashField(
+                controller: customerController,
+                totalBill: totalBill,
+                transactionSaved: transactionSaved,
+                saveTransaction: saveTransaction,
+              ),
+            ],
+          ),
         ),
       ),
+     
+
+
     );
   }
 }
