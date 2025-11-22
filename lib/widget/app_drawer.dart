@@ -1,3 +1,4 @@
+import 'package:cashier_app/home/view/hometest.dart';
 import 'package:cashier_app/home/view/product_form.dart';
 import 'package:cashier_app/home/view/product_list_view.dart';
 import 'package:cashier_app/home/view/product_stock.dart';
@@ -5,55 +6,61 @@ import 'package:cashier_app/home/view/sales_history.dart';
 import 'package:cashier_app/home/view/sales_report.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/database/database_backup.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends StatefulWidget {
   
- final Future<void> Function()? onProductAdded; // <-- add this
+ final Future<void> Function()? onProductAdded;  const AppDrawer({super.key, this.onProductAdded}); 
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
 
- Future<bool> showAdminPasswordDialog(BuildContext context) async {
-  final TextEditingController passwordController = TextEditingController();
-  bool isAdmin = false;
+class _AppDrawerState extends State<AppDrawer> {
+ // <-- add this
+ Future<bool> showPasswordDialog(BuildContext context) async {
+  TextEditingController passwordController = TextEditingController();
+  bool isCorrect = false;
 
   await showDialog(
     context: context,
-    barrierDismissible: false, // User must tap a button
+    barrierDismissible: false,
     builder: (_) => AlertDialog(
-      title: Text("Admin Access"),
       content: TextField(
         controller: passwordController,
-        obscureText: true, // hide input
-        decoration: InputDecoration(labelText: "Enter password"),
+        obscureText: true,
+        decoration: InputDecoration(hintText: 'Enter password'),
       ),
       actions: [
         TextButton(
           onPressed: () {
-            Navigator.pop(context); // Cancel
+            Navigator.of(context).pop(); // close dialog
           },
-          child: Text("Cancel"),
+          child: Text('Cancel'),
         ),
         ElevatedButton(
           onPressed: () {
-            if (passwordController.text == "marhon") {
-              isAdmin = true; // correct password
-              Navigator.pop(context);
+            if (passwordController.text == 'admin123') {
+              // ✅ correct password
+              isCorrect = true;
+              Navigator.of(context).pop();
             } else {
+              // ❌ wrong password
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Wrong password!")),
+                SnackBar(content: Text('Wrong password!')),
               );
             }
           },
-          child: Text("Enter"),
+          child: Text('Submit'),
         ),
       ],
     ),
   );
 
-  return isAdmin; // true if correct password
+  return isCorrect;
 }
 
 
-  const AppDrawer({super.key, this.onProductAdded}); // <-- accept it in constructor
-
+ // <-- accept it in constructor
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -62,13 +69,60 @@ class AppDrawer extends StatelessWidget {
         children: [
           DrawerHeader(
             decoration: BoxDecoration(color: Colors.blue),
-            child: Text(
-              "Honey Sari-Sari Store",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+             CircleAvatar(
+  radius: 65, // size of the circle
+  backgroundColor: Colors.white, // optional background color
+  child: GestureDetector(
+  onTap: () {
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: Text('Select Role'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.pop(context);
+              print('User selected');
+              // handle user role
+            },
+            child: Text('User'),
+          ),
+          SimpleDialogOption(
+  onPressed: () async {
+    bool allowed = await showPasswordDialog(context);
+    if (allowed) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => TestView1()),
+      );
+    }
+  },
+  child: Text('Admin Mode'),
+),
+        ],
+      ),
+    );
+  },
+  child: CircleAvatar(
+    radius: 40,
+    backgroundColor: Colors.white,
+    child: ClipOval(
+      child: SvgPicture.asset(
+        'assets/icons/salmon-nigiri.svg',
+        width: 150,
+        height: 150,
+        fit: BoxFit.cover,
+      ),
+    ),
+  ),
+)
+
+),
+
+              ],
             ),
           ),
 
@@ -97,6 +151,7 @@ class AppDrawer extends StatelessWidget {
     );
   },
 ),
+
 
 
 

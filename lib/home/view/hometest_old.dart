@@ -2,7 +2,9 @@ import 'package:cashier_app/database/app_db.dart';
 
 import 'package:cashier_app/database/sale_service.dart';
 import 'package:cashier_app/home/view/customer_cash.dart';
+
 import 'package:cashier_app/home/view/product_search.dart';
+
 import 'package:cashier_app/home/view/sales_history.dart';
 import 'package:cashier_app/home/view/sales_report.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
@@ -38,29 +40,12 @@ class _TestView1State extends State<TestView1> {
     });
   }
 
-  int calculateTotal(RowData row) {
-    if (row.product == null) return 0;
-
-    final product = row.product!;
-    final qty = row.qty;
-    final price = product.price.toInt();
-
-    // ⭐ PROMO ONLY IF ENABLED
-    if (row.promoApplied && product.name.toLowerCase() == "stick-o") {
-      int sets = qty ~/ 3;
-      int remaining = qty % 3;
-      return sets * 5 + remaining * price;
-    }
-
-    return qty * price;
-  }
-
   int get totalBill {
     int sum = 0;
 
     for (var row in rows) {
       final price = row.product?.price ?? 0; // double or int
-      sum += calculateTotal(row);
+      sum += row.qty * price.toInt();
     }
 
     return sum;
@@ -179,6 +164,7 @@ class _TestView1State extends State<TestView1> {
 
       // ✅ Wrap drawer with callback to refresh products
       drawer: AppDrawer(
+        
         onProductAdded: () async {
           await loadProducts(); // reload products after adding
         },
@@ -194,126 +180,111 @@ class _TestView1State extends State<TestView1> {
           padding: const EdgeInsets.all(20.0),
           child: Column(
             children: [
-              //               Row(
-              //   children: [
-              //     IconButton(
-              //       icon: Icon(
-              //         Icons.local_offer,
-              //         color: row.promoApplied ? Colors.green : Colors.grey,
-              //       ),
-              //       onPressed: () {
-              //         setState(() {
-              //           row.promoApplied = !row.promoApplied;
-              //         });
-              //       },
-              //     ),
-              //     IconButton(
-              //       icon: Icon(Icons.delete, color: Colors.red),
-              //       onPressed: () {
-              //         setState(() {
-              //           if (rows.length > 1) rows.remove(row);
-              //         });
-              //       },
-              //     ),
-              //   ],
-              // ),
-      
-             SingleChildScrollView(
-  scrollDirection: Axis.horizontal,
-  child: Table(
-    border: TableBorder.all(),
-   columnWidths: const {
-  0: FixedColumnWidth(80),  // Qty
-  1: FixedColumnWidth(150), // Item
-  2: FixedColumnWidth(80),  // Price
-  3: FixedColumnWidth(100), // Total
-  4: FixedColumnWidth(150), // Action buttons
-},
-    children: [
-      TableRow(
-        children: [
-          Text('Qty', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('Item', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('Price', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('Total', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('Action', style: TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-
-      ...rows.map((row) {
-        return TableRow(
-          children: [
-            DropdownButton<int>(
-              value: row.qty == 0 ? null : row.qty,
-              isExpanded: true,
-              underline: SizedBox(),
-              hint: Text("0"),
-              items: List.generate(50, (index) {
-                int number = index + 1;
-                return DropdownMenuItem(
-                  value: number,
-                  child: Text(number.toString()),
-                );
-              }),
-              onChanged: (value) {
-                setState(() {
-                  row.qty = value!;
-                });
-              },
-            ),
-
-            DropdownButton<Product>(
-              value: dbProducts.contains(row.product) ? row.product : null,
-              isExpanded: true,
-              underline: SizedBox(),
-              hint: Text("Select item"),
-              items: dbProducts.map((p) {
-                return DropdownMenuItem<Product>(
-                  value: p,
-                  child: Text(p.name),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  row.product = value;
-                  if (row == rows.last) rows.add(RowData());
-                });
-              },
-            ),
-
-            Text(row.product?.price.toString() ?? '0'),
-            Text(calculateTotal(row).toString()),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.local_offer,
-                    color: row.promoApplied ? Colors.green : Colors.grey,
+              
+              SizedBox(height: 100),
+              Table(
+                border: TableBorder.all(),
+                columnWidths: const {
+                  0: FlexColumnWidth(),
+                  1: FlexColumnWidth(),
+                  2: FlexColumnWidth(),
+                  3: FlexColumnWidth(),
+                  4: FlexColumnWidth(),
+                },
+                children: [
+                  // Header row
+                  TableRow(
+                    children: [
+                      Text(
+                        'Qty',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Item',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Price',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Total',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'Action',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                  onPressed: () {
-                    setState(() {
-                      row.promoApplied = !row.promoApplied;
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete, color: Colors.red),
-                  onPressed: () {
-                    setState(() {
-                      if (rows.length > 1) rows.remove(row);
-                    });
-                  },
-                ),
-              ],
-            ),
-          ],
-        );
-      }).toList(),
-    ],
-  ),
-),
+
+                  // Product rows
+                  ...rows.map((row) {
+                    return TableRow(
+                      children: [
+                        // Qty
+                        DropdownButton<int>(
+                          value: row.qty == 0 ? null : row.qty,
+                          isExpanded: true,
+                          underline: SizedBox(),
+                          hint: Text("0"),
+                          items: List.generate(50, (index) {
+                            int number = index + 1;
+                            return DropdownMenuItem(
+                              value: number,
+                              child: Text(number.toString()),
+                            );
+                          }),
+                          onChanged: (value) {
+                            setState(() {
+                              row.qty = value!;
+                            });
+                          },
+                        ),
+
+                        // Item Dropdown
+                        DropdownButton<Product>(
+                          value: dbProducts.contains(row.product)
+                              ? row.product
+                              : null,
+                          isExpanded: true,
+                          underline: SizedBox(),
+                          hint: Text("Select item"),
+                          items: dbProducts.map((p) {
+                            return DropdownMenuItem<Product>(
+                              value: p,
+                              child: Text(p.name),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              row.product = value;
+                              if (row == rows.last)
+                                rows.add(RowData()); // add new row dynamically
+                            });
+                          },
+                        ),
+
+                        // Price
+                        Text(row.product?.price.toString() ?? '0'),
+
+                        // Total
+                        Text((row.qty * (row.product?.price ?? 0)).toString()),
+
+                        // Delete Button
+                        IconButton(
+                          icon: Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              if (rows.length > 1) rows.remove(row);
+                            });
+                          },
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ],
+              ),
 
               SizedBox(height: 10),
               Text(
@@ -332,6 +303,9 @@ class _TestView1State extends State<TestView1> {
           ),
         ),
       ),
+     
+
+
     );
   }
 }
