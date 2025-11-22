@@ -1,4 +1,5 @@
 import 'package:cashier_app/home/viewModel/product.dart';
+import 'package:cashier_app/home/viewModel/sale.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -105,6 +106,8 @@ class AppDB {
     }).toList();
   }
 
+  
+
   // Update product
   Future<void> updateProduct(Product product) async {
     final db = await instance.database;
@@ -131,4 +134,24 @@ class AppDB {
   }
 
   Future<void> seedDefaultProducts() async {}
+
+
+
+Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end) async {
+    final db = await AppDB.instance.database;
+    
+    final result = await db.query(
+      'sales',
+      where: 'date BETWEEN ? AND ?',
+      whereArgs: [start.toIso8601String(), end.toIso8601String()],
+      orderBy: 'date ASC',
+    );
+
+    return result.map((row) => Sale.fromMap(row)).toList();
+  }
+
+  // ... other SaleService methods
+
+
+
 }
