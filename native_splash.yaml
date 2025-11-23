@@ -1,0 +1,16 @@
+flutter_native_splash:
+  android: true
+  ios: false
+  web: false
+  background_image: "assets/background.png"
+  image: "assets/marhon.png"
+  branding: "assets/marhon-copy.png"
+
+  background_image_dark: "assets/marhon.png"
+  image_dark: "assets/marhon-copy.png"
+  branding_dark: "assets/marhon.png"
+
+android_13:
+  color: "#d4e4ed"
+  image: "assets/marhon.png"
+  branding: "assets/marhon-copy.png"

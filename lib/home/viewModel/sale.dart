@@ -4,6 +4,7 @@ class Sale {
   int qty;
   int price;
   int total;
+  
   String date;
 
   Sale({
@@ -38,4 +39,5 @@ class Sale {
       date: map['date'] as String,
     );
   }
+  
 }

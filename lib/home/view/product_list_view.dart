@@ -45,7 +45,7 @@ class _ProductListViewState extends State<ProductListView> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      // Text('id:${product.id ?? '-'} '), // note the space after ID
+                     
                       Text(product.name),
                       Text(
                         ' ₱${product.price.toString()}',

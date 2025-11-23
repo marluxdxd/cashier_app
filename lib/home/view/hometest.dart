@@ -38,22 +38,30 @@ class _TestView1State extends State<TestView1> {
     });
   }
 
-  int calculateTotal(RowData row) {
-    if (row.product == null) return 0;
+int calculateTotal(RowData row) {
+  if (row.product == null) return 0;
 
-    final product = row.product!;
-    final qty = row.qty;
-    final price = product.price.toInt();
+  final product = row.product!;
+  final qty = row.qty;
+  final price = product.price.toInt();
 
-    // ⭐ PROMO ONLY IF ENABLED
-    if (row.promoApplied && product.name.toLowerCase() == "stick-o") {
-      int sets = qty ~/ 3;
-      int remaining = qty % 3;
-      return sets * 5 + remaining * price;
-    }
+  // Apply promo only if user selected it
+  if (row.promoApplied && qty > 0 && price == 2) { // promo only for items priced at 2
+  int promoQty = 3;      // every 3 items
+  int promoPrice = 5;    // price for 3 items
 
-    return qty * price;
-  }
+  int bundles = qty ~/ promoQty;   // number of complete 3-item bundles
+  int remaining = qty % promoQty;  // leftover items
+
+  return (bundles * promoPrice) + (remaining * price);
+}
+
+return qty * price;
+
+}
+
+
+
 
   int get totalBill {
     int sum = 0;
@@ -111,7 +119,8 @@ class _TestView1State extends State<TestView1> {
           productName: row.product!.name,
           qty: row.qty,
           price: row.product!.price.toInt(),
-          total: row.qty * row.product!.price.toInt(),
+            total: calculateTotal(row), // total after promo
+          
           date: DateTime.now().toIso8601String(),
         );
 
@@ -194,29 +203,7 @@ class _TestView1State extends State<TestView1> {
           padding: const EdgeInsets.all(20.0),
           child: Column(
             children: [
-              //               Row(
-              //   children: [
-              //     IconButton(
-              //       icon: Icon(
-              //         Icons.local_offer,
-              //         color: row.promoApplied ? Colors.green : Colors.grey,
-              //       ),
-              //       onPressed: () {
-              //         setState(() {
-              //           row.promoApplied = !row.promoApplied;
-              //         });
-              //       },
-              //     ),
-              //     IconButton(
-              //       icon: Icon(Icons.delete, color: Colors.red),
-              //       onPressed: () {
-              //         setState(() {
-              //           if (rows.length > 1) rows.remove(row);
-              //         });
-              //       },
-              //     ),
-              //   ],
-              // ),
+       
       
              SingleChildScrollView(
   scrollDirection: Axis.horizontal,
@@ -271,6 +258,7 @@ class _TestView1State extends State<TestView1> {
                 return DropdownMenuItem<Product>(
                   value: p,
                   child: Text(p.name),
+                  
                 );
               }).toList(),
               onChanged: (value) {

@@ -1,6 +1,7 @@
 import 'package:cashier_app/home/view/hometest.dart';
 import 'package:cashier_app/home/view/product_form.dart';
 import 'package:cashier_app/home/view/product_list_view.dart';
+import 'package:cashier_app/home/view/product_manual.dart';
 import 'package:cashier_app/home/view/product_stock.dart';
 import 'package:cashier_app/home/view/sales_history.dart';
 import 'package:cashier_app/home/view/sales_report.dart';
@@ -125,7 +126,18 @@ class _AppDrawerState extends State<AppDrawer> {
               ],
             ),
           ),
-
+ ListTile(
+            leading: Icon(Icons.add_moderator_outlined),
+            title: Text("Build File"),
+            onTap: () {
+              Navigator.pop(context);
+              showDialog(
+                barrierColor: Colors.black.withOpacity(0.2),
+                context: context,
+                builder: (context) => ProductManual(),
+              );
+            },
+          ),
           ListTile(
             leading: Icon(Icons.home),
             title: Text("Home"),

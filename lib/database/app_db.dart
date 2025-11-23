@@ -46,6 +46,7 @@ class AppDB {
         qty INTEGER,
         price INTEGER,
         total INTEGER,
+        promoDiscount INTEGER DEFAULT 0,
         date TEXT
       )
     ''');

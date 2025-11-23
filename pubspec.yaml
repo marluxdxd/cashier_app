@@ -43,8 +43,10 @@ dependencies:
   permission_handler: ^12.0.1
   intl: ^0.18.1 
   
+  
 
 dev_dependencies:
+  flutter_native_splash: ^2.4.7
   flutter_test:
     sdk: flutter
 
@@ -55,8 +57,34 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+flutter_native_splash:
+  android: true
+  ios: true
+
+  color: "#D64151"
+  image: assets/images/marhon.png
+  branding: assets/images/brandimage.png
+
+  branding_bottom_padding_ios: 35
+
+  color_dark: "#332828"
+
+  android_12:
+    color: "#D64151"
+    color_dark: "#332828"
+    image: assets/images/marhon12splash.png
+    branding: assets/images/brandimage.png
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon.png"
+  adaptive_icon_foreground: "assets/images/foreground.png"
+  adaptive_icon_background: "assets/images/background.png"
+  remove_alpha_ios: true
 
 # The following section is specific to Flutter packages.
 flutter:
