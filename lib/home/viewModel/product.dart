@@ -1,18 +1,21 @@
 class Product {
   int? id; // optional, used for database
   int qty; // represents actual stock in store
+  int otherqty;
   String name;
   double price;
 
   Product({
     this.id,
     this.qty = 0, // default for POS / store stock
+    this.otherqty = 0,
     required this.name,
     required this.price,
   });
 
   // Total for POS (qty * price)
   double get total => qty * price;
+  double get totals => otherqty * price;
 
   // Reduce stock after a sale
   void reduceStock(int soldQty) {
@@ -33,6 +36,8 @@ class Product {
     qty += addedQty;
   }
 
+  
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -42,4 +47,6 @@ class Product {
 
   @override
   int get hashCode => id.hashCode; // Use id for unique identification
+
+  
 }

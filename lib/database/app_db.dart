@@ -35,7 +35,8 @@ class AppDB {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT,
         price INTEGER,
-        qty INTEGER DEFAULT 0
+        qty INTEGER DEFAULT 0,
+        otherqty INTEGER DEFAULT 0
       )
     ''');
 
@@ -53,29 +54,38 @@ class AppDB {
   }
 
   // Auto-upgrade if tables do not exist
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 3) {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS products (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT,
-          price INTEGER,
-          qty INTEGER DEFAULT 0
-        )
-      ''');
+Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  // Upgrade to version 3 logic (keep your old upgrade if needed)
+  if (oldVersion < 3) {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        price INTEGER,
+        qty INTEGER DEFAULT 0
+      )
+    ''');
 
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS sales (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          productName TEXT,
-          qty INTEGER,
-          price INTEGER,
-          total INTEGER,
-          date TEXT
-        )
-      ''');
-    }
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        productName TEXT,
+        qty INTEGER,
+        price INTEGER,
+        total INTEGER,
+        date TEXT
+      )
+    ''');
   }
+
+  // Upgrade to version 4: add new column 'otherqty'
+  if (oldVersion < 4) {
+    await db.execute('''
+      ALTER TABLE products ADD COLUMN otherqty INTEGER DEFAULT 0
+    ''');
+  }
+}
+
 
   Future close() async {
     final db = await instance.database;
@@ -89,6 +99,7 @@ class AppDB {
       'name': product.name,
       'price': product.price.toInt(),
       'qty': product.qty,
+      'otherqty': product.otherqty,
     });
   }
 
@@ -103,6 +114,7 @@ class AppDB {
         name: row['name'] as String,
         price: (row['price'] as int).toDouble(),
         qty: row['qty'] as int,
+        otherqty: row['otherqty'] as int,
       );
     }).toList();
   }

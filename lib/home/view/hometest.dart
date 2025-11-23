@@ -1,10 +1,8 @@
 import 'package:cashier_app/database/app_db.dart';
 
-import 'package:cashier_app/database/sale_service.dart';
+import 'package:cashier_app/home/viewModel/sale_service.dart';
 import 'package:cashier_app/home/view/customer_cash.dart';
 import 'package:cashier_app/home/view/product_search.dart';
-import 'package:cashier_app/home/view/sales_history.dart';
-import 'package:cashier_app/home/view/sales_report.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/home/viewModel/row.dart';
 import 'package:cashier_app/data/row_data.dart';
@@ -173,15 +171,19 @@ return qty * price;
         ),
         centerTitle: true,
         actions: [
-          GestureDetector(
-            onTap: () {
-              showDialog(
-                barrierColor: Colors.black.withOpacity(0.2),
-                context: context,
-                builder: (context) => SearchProduct(),
-              );
-            },
-            child: Icon(Icons.search, color: Colors.black),
+         
+          Padding(
+            padding: const EdgeInsets.only(right: 40.0),
+            child: GestureDetector(
+              onTap: () {
+                showDialog(
+                  barrierColor: Colors.black.withOpacity(0.2),
+                  context: context,
+                  builder: (context) => SearchProduct(),
+                );
+              },
+              child: Icon(Icons.search, color: Colors.black),
+            ),
           ),
         ],
       ),
@@ -202,9 +204,10 @@ return qty * price;
               AlwaysScrollableScrollPhysics(), // allows scroll for RefreshIndicator
           padding: const EdgeInsets.all(20.0),
           child: Column(
+            
             children: [
        
-      
+      SizedBox(height: 200),
              SingleChildScrollView(
   scrollDirection: Axis.horizontal,
   child: Table(

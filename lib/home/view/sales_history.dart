@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cashier_app/database/sale_service.dart';
+import 'package:cashier_app/home/viewModel/sale_service.dart';
 import 'package:cashier_app/home/viewModel/sale.dart';
 
 class SalesHistoryView extends StatefulWidget {
