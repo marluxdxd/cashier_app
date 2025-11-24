@@ -1,5 +1,5 @@
-import 'package:cashier_app/home/view/hometest.dart';
-import 'package:cashier_app/home/view/product_form.dart';
+import 'package:cashier_app/home/view/home.dart';
+import 'package:cashier_app/home/view/product_add.dart';
 import 'package:cashier_app/home/view/product_list_view.dart';
 import 'package:cashier_app/home/view/product_manual.dart';
 import 'package:cashier_app/home/view/product_stock.dart';
@@ -128,7 +128,7 @@ class _AppDrawerState extends State<AppDrawer> {
           ),
  ListTile(
             leading: Icon(Icons.add_moderator_outlined),
-            title: Text("Build File"),
+            title: Text("Add Products Promo"),
             onTap: () {
               Navigator.pop(context);
               showDialog(

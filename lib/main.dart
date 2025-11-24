@@ -1,5 +1,5 @@
 // import 'package:cashier_app/home/view/home.dart';
-import 'package:cashier_app/home/view/hometest.dart';
+import 'package:cashier_app/home/view/home.dart';
 
 import 'package:flutter/material.dart';
 

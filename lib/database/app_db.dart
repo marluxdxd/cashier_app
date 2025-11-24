@@ -22,7 +22,7 @@ class AppDB {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -36,7 +36,8 @@ class AppDB {
         name TEXT,
         price INTEGER,
         qty INTEGER DEFAULT 0,
-        otherqty INTEGER DEFAULT 0
+        otherqty INTEGER DEFAULT 0,
+        promo INTEGER DEFAULT 0
       )
     ''');
 
@@ -84,6 +85,13 @@ Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
       ALTER TABLE products ADD COLUMN otherqty INTEGER DEFAULT 0
     ''');
   }
+
+   // Upgrade to version 5: add promo column
+  if (oldVersion < 5) {
+    await db.execute('''
+      ALTER TABLE products ADD COLUMN promo INTEGER DEFAULT 0
+    ''');
+  }
 }
 
 
@@ -100,6 +108,7 @@ Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
       'price': product.price.toInt(),
       'qty': product.qty,
       'otherqty': product.otherqty,
+      'promo': product.promo ? 1 : 0, // NEW
     });
   }
 
@@ -115,6 +124,7 @@ Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
         price: (row['price'] as int).toDouble(),
         qty: row['qty'] as int,
         otherqty: row['otherqty'] as int,
+        promo: (row['promo'] as int? ?? 0) == 1, // NEW
       );
     }).toList();
   }

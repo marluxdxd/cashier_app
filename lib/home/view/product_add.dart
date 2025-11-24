@@ -6,7 +6,6 @@ class AddProduct extends StatefulWidget {
   final VoidCallback? onProductAdded;
 
   const AddProduct({super.key, this.onProductAdded});
-  
 
   @override
   State<AddProduct> createState() => _AddProductState();
@@ -17,19 +16,17 @@ class _AddProductState extends State<AddProduct> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
 
-    // 📦 This box will store our qty value
+  // 📦 This box will store our qty value
   TextEditingController qtyController = TextEditingController();
   TextEditingController qty1Controller = TextEditingController();
-
-
 
   void addProduct() async {
     if (_formKey.currentState!.validate()) {
       final product = Product(
         name: nameController.text,
         price: double.tryParse(priceController.text) ?? 0,
-         qty: int.tryParse(qtyController.text) ?? 0, // ✅ Save qty
-          otherqty: int.tryParse(qty1Controller.text) ?? 0, // ✅ Save qty
+        qty: int.tryParse(qtyController.text) ?? 0, // ✅ Save qty
+        otherqty: int.tryParse(qty1Controller.text) ?? 0, // ✅ Save qty
       );
 
       // Insert product into database
@@ -42,10 +39,12 @@ class _AddProductState extends State<AddProduct> {
 
       // ✅ Clear fields to add next product
       nameController.clear();
+
       priceController.clear();
+      qtyController.clear();
+      qty1Controller.clear();
       qtyController.text = "";
       qty1Controller.text = "";
-      
 
       // ✅ Optional: Focus back to the name field
       FocusScope.of(context).requestFocus(FocusNode());
@@ -73,44 +72,35 @@ class _AddProductState extends State<AddProduct> {
                 Expanded(
                   child: Column(
                     children: [
-          
-          // 📝 User types here, controller stores the value
-         TextFormField(
-  controller: qty1Controller,
-  keyboardType: TextInputType.number,
-  decoration: InputDecoration(labelText: 'Other Qty'),
-),
+                      // 📝 User types here, controller stores the value
+                      TextFormField(
+                        controller: qty1Controller,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: 'Other Qty'),
+                      ),
 
+                      // 📤 Read the qty stored in controller
+                      ElevatedButton(
+                        onPressed: () {
+                          int otherqty = int.tryParse(qty1Controller.text) ?? 0;
+                          print("Qty is: $otherqty");
+                        },
+                        child: Text("Get Qty"),
+                      ),
 
-
-
-
-          // 📤 Read the qty stored in controller
-          ElevatedButton(
-            onPressed: () {
-              int otherqty = int.tryParse(qty1Controller.text) ?? 0;
-              print("Qty is: $otherqty");
-            },
-            child: Text("Get Qty"),
-          ),
-
-          ElevatedButton(
-  onPressed: () async {
-    final products = await AppDB.instance.fetchProducts();
-    for (var p in products) {
-      print("${p.name} | ${p.qty} | ${p.otherqty} | ${p.price}");
-    }
-  },
-  child: Text("Print Products"),
-)
-
-
-
-
-
-
-        ],
-                  )
+                      ElevatedButton(
+                        onPressed: () async {
+                          final products = await AppDB.instance.fetchProducts();
+                          for (var p in products) {
+                            print(
+                              "${p.name} | ${p.qty} | ${p.otherqty} | ${p.price}",
+                            );
+                          }
+                        },
+                        child: Text("Print Products"),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -139,6 +129,7 @@ class _AddProductState extends State<AddProduct> {
                 return null;
               },
             ),
+
             SizedBox(height: 20),
             Text(
               'Note: After adding, you can add another product immediately.',

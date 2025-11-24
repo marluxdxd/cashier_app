@@ -4,13 +4,17 @@ class Product {
   int otherqty;
   String name;
   double price;
+  bool promo; // NEW
+    int? fixedQty; // NEW: if null => user can change qty, if not null => fixed qty
 
   Product({
     this.id,
     this.qty = 0, // default for POS / store stock
-    this.otherqty = 0,
+    this.otherqty = 1,
     required this.name,
     required this.price,
+    this.promo = false, // NEW
+     this.fixedQty, // default null
   });
 
   // Total for POS (qty * price)
