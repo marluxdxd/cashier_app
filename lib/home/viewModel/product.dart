@@ -6,6 +6,7 @@ class Product {
   double price;
   bool promo; // NEW
     int? fixedQty; // NEW: if null => user can change qty, if not null => fixed qty
+bool promoApplied;
 
   Product({
     this.id,
@@ -15,6 +16,7 @@ class Product {
     required this.price,
     this.promo = false, // NEW
      this.fixedQty, // default null
+     this.promoApplied = false,
   });
 
   // Total for POS (qty * price)

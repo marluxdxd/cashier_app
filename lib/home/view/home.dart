@@ -1,6 +1,5 @@
 import 'package:cashier_app/database/app_db.dart';
-import 'package:cashier_app/home/view/test.dart';
-
+import 'package:cashier_app/home/view/product_notification.dart';
 import 'package:cashier_app/home/viewModel/sale_service.dart';
 import 'package:cashier_app/home/view/customer_cash.dart';
 import 'package:cashier_app/home/view/product_search.dart';
@@ -24,6 +23,7 @@ class _TestView1State extends State<TestView1> {
   Product? selectedProduct;
   int qty = 0;
   List<Product> dbProducts = [];
+  bool promo = false; // default ON
   @override
   void initState() {
     super.initState();
@@ -39,26 +39,20 @@ class _TestView1State extends State<TestView1> {
   }
 
   int calculateTotal(RowData row) {
-    if (row.product == null) return 0;
+  if (row.product == null) return 0;
 
-    final product = row.product!;
-    final qty = row.qty;
-    final price = product.price.toInt();
+  final product = row.product!;
+  final qty = row.qty;
+  final price = product.price.toInt();
 
-    // Apply promo only if user selected it
-    if (row.promoApplied && qty > 0 && price == 2) {
-      // promo only for items priced at 2
-      int promoQty = 3; // every 3 items
-      int promoPrice = 5; // price for 3 items
-
-      int bundles = qty ~/ promoQty; // number of complete 3-item bundles
-      int remaining = qty % promoQty; // leftover items
-
-      return (bundles * promoPrice) + (remaining * price);
-    }
-
-    return qty * price;
+  if (product.promo) { // if product is active promo
+    promo = true;
+    return (qty * price) - 1;
   }
+
+  return qty * price;
+}
+
 
   int get totalBill {
     int sum = 0;
@@ -161,7 +155,7 @@ class _TestView1State extends State<TestView1> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Honey Sari-Sari Store',
+          '',
           style: TextStyle(
             color: Colors.black,
             fontSize: 20,
@@ -171,16 +165,30 @@ class _TestView1State extends State<TestView1> {
         centerTitle: true,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 40.0),
-            child: GestureDetector(
-              onTap: () {
-                showDialog(
-                  barrierColor: Colors.black.withOpacity(0.2),
+            padding: const EdgeInsets.only(right: 20.0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.notifications),
+                  onPressed: () {
+                    showDialog(
+                     barrierColor: Colors.black.withOpacity(0.2),
                   context: context,
-                  builder: (context) => SearchProduct(),
-                );
-              },
-              child: Icon(Icons.search, color: Colors.black),
+                    builder: (context) => ProductNotification(),
+                    );
+                  }, 
+                ),
+                SizedBox(width: 20,),
+                IconButton(onPressed:(){
+                   showDialog(
+                      barrierColor: Colors.black.withOpacity(0.2),
+                      context: context,
+                      builder: (context) => SearchProduct(),
+                    );
+                }, icon: Icon(Icons.search)),
+             
+                
+              ],
             ),
           ),
         ],
@@ -205,7 +213,24 @@ class _TestView1State extends State<TestView1> {
             children: [
               
 
-              Text('test'),
+             IconButton(
+  icon: Icon(Icons.textsms_sharp),
+  onPressed: () {
+    bool promo = false;
+    int qty = 3;
+    int price = 1;
+
+    
+
+
+    if (!promo) {
+       print("Promo not applied for $qty items");
+
+    
+    }
+  },
+),
+
 
               
               SizedBox(height: 200),
@@ -295,7 +320,7 @@ class _TestView1State extends State<TestView1> {
                             onChanged: (p) {
                               setState(() {
                                 row.product = p;
-                                if (row == rows.last) rows.add(RowData());
+                                if (row == rows.last) rows.add(RowData()); // keep adding row if last
                               });
                             },
                           ),
@@ -309,13 +334,13 @@ class _TestView1State extends State<TestView1> {
                               IconButton(
                                 icon: Icon(
                                   Icons.local_offer,
-                                  color: row.promoApplied
+                                  color: promo
                                       ? Colors.green
                                       : Colors.grey,
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    row.promoApplied = !row.promoApplied;
+                                    promo = !promo;
                                   });
                                 },
                               ),

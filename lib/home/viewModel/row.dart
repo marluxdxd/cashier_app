@@ -6,6 +6,7 @@ class RowData {
   int qty = 0;
   bool promoApplied;
   String discountType; // <-- ADD THIS
+  
 
   // ⭐ Needed for searchable text field
   TextEditingController productController = TextEditingController();

@@ -15,18 +15,19 @@ class _AddProductState extends State<AddProduct> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
-
+  bool promo = false; // default ON
   // 📦 This box will store our qty value
   TextEditingController qtyController = TextEditingController();
   TextEditingController qty1Controller = TextEditingController();
 
   void addProduct() async {
     if (_formKey.currentState!.validate()) {
-      final product = Product(
+       final product = Product(
         name: nameController.text,
         price: double.tryParse(priceController.text) ?? 0,
         qty: int.tryParse(qtyController.text) ?? 0, // ✅ Save qty
         otherqty: int.tryParse(qty1Controller.text) ?? 0, // ✅ Save qty
+        promo: promo, // ✅ set from IconButton
       );
 
       // Insert product into database
@@ -67,7 +68,18 @@ class _AddProductState extends State<AddProduct> {
           children: [
             Row(
               children: [
-                Text('qty: '),
+                IconButton(
+                  icon: Icon(
+                    Icons.local_offer,
+                    color: promo ? Colors.green : Colors.grey,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      promo = !promo; // toggle on/off
+                    });
+                  },
+                ),
+
                 SizedBox(width: 10), // spacing
                 Expanded(
                   child: Column(
@@ -79,21 +91,21 @@ class _AddProductState extends State<AddProduct> {
                         decoration: InputDecoration(labelText: 'Other Qty'),
                       ),
 
-                      // 📤 Read the qty stored in controller
-                      ElevatedButton(
-                        onPressed: () {
-                          int otherqty = int.tryParse(qty1Controller.text) ?? 0;
-                          print("Qty is: $otherqty");
-                        },
-                        child: Text("Get Qty"),
-                      ),
+                      // // 📤 Read the qty stored in controller
+                      // ElevatedButton(
+                      //   onPressed: () {
+                      //     int otherqty = int.tryParse(qty1Controller.text) ?? 0;
+                      //     print("Qty is: $otherqty");
+                      //   },
+                      //   child: Text("Get Qty"),
+                      // ),
 
                       ElevatedButton(
                         onPressed: () async {
                           final products = await AppDB.instance.fetchProducts();
                           for (var p in products) {
                             print(
-                              "${p.name} | ${p.qty} | ${p.otherqty} | ${p.price}",
+                              "${p.name} | ${p.qty} | ${p.otherqty} | ${p.price} | ${p.promo}",
                             );
                           }
                         },
