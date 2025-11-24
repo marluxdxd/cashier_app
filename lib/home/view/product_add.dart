@@ -22,7 +22,7 @@ class _AddProductState extends State<AddProduct> {
 
   void addProduct() async {
     if (_formKey.currentState!.validate()) {
-       final product = Product(
+      final product = Product(
         name: nameController.text,
         price: double.tryParse(priceController.text) ?? 0,
         qty: int.tryParse(qtyController.text) ?? 0, // ✅ Save qty
@@ -68,6 +68,8 @@ class _AddProductState extends State<AddProduct> {
           children: [
             Row(
               children: [
+               
+
                 IconButton(
                   icon: Icon(
                     Icons.local_offer,
@@ -80,6 +82,16 @@ class _AddProductState extends State<AddProduct> {
                   },
                 ),
 
+                 TextButton(
+                  onPressed: () {
+                    // Action to perform when the button is pressed
+                    print('!');
+                  },
+                  child: Text('2',style: TextStyle(fontSize: 10),),
+                ),
+                
+                
+
                 SizedBox(width: 10), // spacing
                 Expanded(
                   child: Column(
@@ -90,15 +102,6 @@ class _AddProductState extends State<AddProduct> {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(labelText: 'Other Qty'),
                       ),
-
-                      // // 📤 Read the qty stored in controller
-                      // ElevatedButton(
-                      //   onPressed: () {
-                      //     int otherqty = int.tryParse(qty1Controller.text) ?? 0;
-                      //     print("Qty is: $otherqty");
-                      //   },
-                      //   child: Text("Get Qty"),
-                      // ),
 
                       ElevatedButton(
                         onPressed: () async {
