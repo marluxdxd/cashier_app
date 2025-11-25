@@ -48,8 +48,14 @@ class _TestView1State extends State<TestView1> {
   if (product.promo) { // if product is active promo
     promo = true;
     return (qty * price) - 1;
-  }
 
+  }
+ if (product == promo) { // if product is active promo
+      for (int q = 3; q < 12; q += 2) {
+    print(q);
+    }
+  
+  }
   return qty * price;
 }
 
@@ -279,18 +285,36 @@ class _TestView1State extends State<TestView1> {
                             isExpanded: true,
                             underline: SizedBox(),
                             hint: Text("0"),
-                            items: List.generate(50, (index) {
-                              int number = index + 1;
-                              return DropdownMenuItem(
-                                value: number,
-                                child: Text(number.toString()),
-                              );
-                            }),
-                            onChanged: (value) {
-                              setState(() {
-                                row.qty = value!;
-                              });
-                            },
+                           items: List.generate(20, (index) {
+  int step = row.product?.otherqty ?? 1;
+  if (step <= 0) step = 1;
+
+  int number = (index + 1) * step;  // multiples
+  return DropdownMenuItem(
+    value: number,
+    child: Text(number.toString()),
+  );
+}),
+
+                       onChanged: (value) {
+  setState(() {
+    row.qty = value!;
+
+    // ⭐ get the step from product.otherqty
+    if (row.product != null) {
+      int step = row.product!.otherqty;   // <-- your correct step
+      if (step <= 0) step = 1;
+
+      // ⭐ auto-correct qty to nearest valid multiple
+      if (row.qty % step != 0) {
+        row.qty = ((row.qty / step).ceil()) * step;
+        print("Corrected qty to: ${row.qty}");
+      }
+    }
+  });
+},
+
+
                           ),
 
                           DropdownSearch<Product>(
@@ -331,19 +355,19 @@ class _TestView1State extends State<TestView1> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              IconButton(
-                                icon: Icon(
-                                  Icons.local_offer,
-                                  color: promo
-                                      ? Colors.green
-                                      : Colors.grey,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    promo = !promo;
-                                  });
-                                },
-                              ),
+                              // IconButton(
+                              //   icon: Icon(
+                              //     Icons.local_offer,
+                              //     color: promo
+                              //         ? Colors.green
+                              //         : Colors.grey,
+                              //   ),
+                              //   onPressed: () {
+                              //     setState(() {
+                              //       promo = !promo;
+                              //     });
+                              //   },
+                              // ),
                               IconButton(
                                 icon: Icon(Icons.delete, color: Colors.red),
                                 onPressed: () {

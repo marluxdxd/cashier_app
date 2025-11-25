@@ -37,7 +37,7 @@ class AppDB {
         price INTEGER,
         qty INTEGER DEFAULT 0,
         otherqty INTEGER DEFAULT 0,
-        promo INTEGER DEFAULT 0,
+        promo INTEGER DEFAULT 0
         
       )
     ''');

@@ -4,19 +4,22 @@ class Product {
   int otherqty;
   String name;
   double price;
+    double retainprice;  // retain price (special price)
   bool promo; // NEW
-    int? fixedQty; // NEW: if null => user can change qty, if not null => fixed qty
-bool promoApplied;
+  int? fixedQty; // NEW: if null => user can change qty, if not null => fixed qty
+  bool promoApplied;
+  
 
   Product({
     this.id,
     this.qty = 0, // default for POS / store stock
-    this.otherqty = 1,
+    this.otherqty = 0,
     required this.name,
     required this.price,
+     this.retainprice = 0,
     this.promo = false, // NEW
-     this.fixedQty, // default null
-     this.promoApplied = false,
+    this.fixedQty, // default null
+    this.promoApplied = false,
   });
 
   // Total for POS (qty * price)
@@ -42,8 +45,6 @@ bool promoApplied;
     qty += addedQty;
   }
 
-  
-
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -53,6 +54,4 @@ bool promoApplied;
 
   @override
   int get hashCode => id.hashCode; // Use id for unique identification
-
-  
 }

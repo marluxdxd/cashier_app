@@ -15,7 +15,9 @@ class _AddProductState extends State<AddProduct> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
+  TextEditingController retainPriceController = TextEditingController();
   bool promo = false; // default ON
+  int test = 0;
   // 📦 This box will store our qty value
   TextEditingController qtyController = TextEditingController();
   TextEditingController qty1Controller = TextEditingController();
@@ -28,6 +30,7 @@ class _AddProductState extends State<AddProduct> {
         qty: int.tryParse(qtyController.text) ?? 0, // ✅ Save qty
         otherqty: int.tryParse(qty1Controller.text) ?? 0, // ✅ Save qty
         promo: promo, // ✅ set from IconButton
+        
       );
 
       // Insert product into database
@@ -44,6 +47,8 @@ class _AddProductState extends State<AddProduct> {
       priceController.clear();
       qtyController.clear();
       qty1Controller.clear();
+      retainPriceController.clear();
+
       qtyController.text = "";
       qty1Controller.text = "";
 
@@ -68,8 +73,6 @@ class _AddProductState extends State<AddProduct> {
           children: [
             Row(
               children: [
-               
-
                 IconButton(
                   icon: Icon(
                     Icons.local_offer,
@@ -81,17 +84,6 @@ class _AddProductState extends State<AddProduct> {
                     });
                   },
                 ),
-
-                 TextButton(
-                  onPressed: () {
-                    // Action to perform when the button is pressed
-                    print('!');
-                  },
-                  child: Text('2',style: TextStyle(fontSize: 10),),
-                ),
-                
-                
-
                 SizedBox(width: 10), // spacing
                 Expanded(
                   child: Column(
@@ -102,18 +94,36 @@ class _AddProductState extends State<AddProduct> {
                         keyboardType: TextInputType.number,
                         decoration: InputDecoration(labelText: 'Other Qty'),
                       ),
+ Text(
+              'ex, Buy 3: Stick-O Price 2 = 5',
+              style: TextStyle(fontSize: 11.5, color: Colors.grey),
+            ),
+          
+                      // ElevatedButton(
+                      //   onPressed: () async {
+                      //     // 1️⃣ Get user input safely
+                      //     int step =
+                      //         int.tryParse(qty1Controller.text) ??
+                      //         2; // default 1
+                      //     if (step <= 0) step = 2; // prevent infinite loop
 
-                      ElevatedButton(
-                        onPressed: () async {
-                          final products = await AppDB.instance.fetchProducts();
-                          for (var p in products) {
-                            print(
-                              "${p.name} | ${p.qty} | ${p.otherqty} | ${p.price} | ${p.promo}",
-                            );
-                          }
-                        },
-                        child: Text("Print Products"),
-                      ),
+                      //     // 2️⃣ Fetch products from DB
+                      //     final products = await AppDB.instance.fetchProducts();
+
+                      //     // 3️⃣ Loop through products and calculate multiples
+                      //     for (var p in products) {
+                      //       if (p.promo) {
+                      //         print("Calculated multiples for ${p.name}:");
+                      //         for (int i = step; i <= 20; i += step) {
+                      //           print(
+                      //             "${p.name} | ${p.qty} | ${p.otherqty} | ${p.price} | ${p.promo} | ${i}",
+                      //           );
+                      //         }
+                      //       }
+                      //     }
+                      //   },
+                      //   child: Text("Debug Console"),
+                      // ),
                     ],
                   ),
                 ),
@@ -132,7 +142,7 @@ class _AddProductState extends State<AddProduct> {
             ),
             TextFormField(
               controller: priceController,
-              decoration: InputDecoration(labelText: 'Price'),
+              decoration: InputDecoration(labelText: 'Sale Price'),
               keyboardType: TextInputType.number,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -144,6 +154,20 @@ class _AddProductState extends State<AddProduct> {
                 return null;
               },
             ),
+               TextFormField(
+  controller: retainPriceController,
+  decoration: InputDecoration(labelText: 'Retain Price'),
+  keyboardType: TextInputType.number,
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter a price';
+    }
+    if (double.tryParse(value) == null) {
+      return 'Enter a valid number';
+    }
+    return null;
+  },
+),
 
             SizedBox(height: 20),
             Text(

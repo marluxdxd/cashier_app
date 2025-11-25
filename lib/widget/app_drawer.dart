@@ -1,7 +1,6 @@
 import 'package:cashier_app/home/view/home.dart';
 import 'package:cashier_app/home/view/product_add.dart';
 import 'package:cashier_app/home/view/product_list_view.dart';
-import 'package:cashier_app/home/view/product_manual.dart';
 import 'package:cashier_app/home/view/product_stock.dart';
 import 'package:cashier_app/home/view/sales_history.dart';
 import 'package:cashier_app/home/view/sales_report.dart';
@@ -108,11 +107,11 @@ class _AppDrawerState extends State<AppDrawer> {
     );
   },
   child: CircleAvatar(
-    radius: 40,
+    radius: 100,
     backgroundColor: Colors.white,
     child: ClipOval(
-      child: SvgPicture.asset(
-        'assets/icons/salmon-nigiri.svg',
+      child: Image.asset(
+        'assets/images/marhon.png',
         width: 150,
         height: 150,
         fit: BoxFit.cover,
@@ -125,18 +124,6 @@ class _AppDrawerState extends State<AppDrawer> {
 
               ],
             ),
-          ),
- ListTile(
-            leading: Icon(Icons.add_moderator_outlined),
-            title: Text("Add Products Promo"),
-            onTap: () {
-              Navigator.pop(context);
-              showDialog(
-                barrierColor: Colors.black.withOpacity(0.2),
-                context: context,
-                builder: (context) => ProductManual(),
-              );
-            },
           ),
           ListTile(
             leading: Icon(Icons.home),
