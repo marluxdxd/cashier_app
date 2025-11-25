@@ -18,6 +18,7 @@ class _AddProductState extends State<AddProduct> {
   TextEditingController retainPriceController = TextEditingController();
   bool promo = false; // default ON
   int test = 0;
+   int? selectedPromo; // null initially
   // 📦 This box will store our qty value
   TextEditingController qtyController = TextEditingController();
   TextEditingController qty1Controller = TextEditingController();
@@ -73,17 +74,37 @@ class _AddProductState extends State<AddProduct> {
           children: [
             Row(
               children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.local_offer,
-                    color: promo ? Colors.green : Colors.grey,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      promo = !promo; // toggle on/off
-                    });
-                  },
-                ),
+            
+
+// Inside your widget:
+
+
+// Optional: s  how a colored icon next to the radio
+Column(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    GestureDetector(
+      onTap: () {
+        setState(() {
+          promo = !promo;
+        });
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '-1',
+            style: TextStyle(fontSize: 10),
+          ),
+          Icon(
+            promo ? Icons.check_box : Icons.check_box_outline_blank,
+            size: 18, // small size
+          ),
+        ],
+      ),
+    ),
+  ],
+),
                 SizedBox(width: 10), // spacing
                 Expanded(
                   child: Column(
@@ -92,11 +113,11 @@ class _AddProductState extends State<AddProduct> {
                       TextFormField(
                         controller: qty1Controller,
                         keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: 'Other Qty'),
+                        decoration: InputDecoration(labelText: 'Enter number'),
                       ),
  Text(
-              'ex, Buy 3: Stick-O Price 2 = 5',
-              style: TextStyle(fontSize: 11.5, color: Colors.grey),
+              'Note: if you check promo will be activate(leave a blank if none)',
+              style: TextStyle(fontSize: 10, color: Colors.grey),
             ),
           
                       // ElevatedButton(

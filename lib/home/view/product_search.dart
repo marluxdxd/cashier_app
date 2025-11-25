@@ -210,7 +210,7 @@ class _SearchProductState extends State<SearchProduct> {
                           ),
                         ],
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),

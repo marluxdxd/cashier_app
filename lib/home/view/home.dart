@@ -20,10 +20,9 @@ class TestView1 extends StatefulWidget {
 
 class _TestView1State extends State<TestView1> {
   bool transactionSaved = false;
-  Product? selectedProduct;
-  int qty = 0;
   List<Product> dbProducts = [];
-  bool promo = false; // default ON
+  bool promo = false;
+
   @override
   void initState() {
     super.initState();
@@ -39,98 +38,57 @@ class _TestView1State extends State<TestView1> {
   }
 
   int calculateTotal(RowData row) {
-  if (row.product == null) return 0;
+    if (row.product == null) return 0;
+    final p = row.product!;
+    final price = p.price.toInt();
 
-  final product = row.product!;
-  final qty = row.qty;
-  final price = product.price.toInt();
+    if (p.promo) return (row.qty * price) - 1;
 
-  if (product.promo) { // if product is active promo
-    promo = true;
-    return (qty * price) - 1;
-
+    return row.qty * price;
   }
- if (product == promo) { // if product is active promo
-      for (int q = 3; q < 12; q += 2) {
-    print(q);
-    }
-  
-  }
-  return qty * price;
-}
 
-
-  int get totalBill {
-    int sum = 0;
-
-    for (var row in rows) {
-      final price = row.product?.price ?? 0; // double or int
-      sum += calculateTotal(row);
-    }
-
-    return sum;
-  }
+  int get totalBill => rows.fold(0, (sum, row) => sum + calculateTotal(row));
 
   TextEditingController customerController = TextEditingController();
 
-  int get change {
-    int customerCash = int.tryParse(customerController.text) ?? 0;
-    return customerCash - totalBill;
-  }
-
   void controllerClearCustomerCash() {
-    setState(() {
-      customerController.clear();
-    });
+    setState(() => customerController.clear());
   }
 
-  // ✅ PUT THE FUNCTION HERE
   void saveTransaction() async {
     if (transactionSaved) return;
     transactionSaved = true;
-
     final service = SaleService();
 
     for (var row in rows) {
       if (row.product != null && row.qty > 0) {
         try {
-          // ⭐ CHECK STOCK
           row.product!.reduceStock(row.qty);
         } catch (e) {
-          // ⭐ SHOW STOCK ERROR
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(e.toString().replaceAll("Exception:", "").trim()),
             ),
           );
-
-          // ⭐ CLEAR CUSTOMER CASH FIELD
-          controllerClearCustomerCash();
-
           transactionSaved = false;
           return;
         }
 
-        // ⭐ SAVE SALE
         final sale = Sale(
           productName: row.product!.name,
           qty: row.qty,
           price: row.product!.price.toInt(),
-          total: calculateTotal(row), // total after promo
-
+          total: calculateTotal(row),
           date: DateTime.now().toIso8601String(),
         );
 
         await service.insertSale(sale);
-
-        // ⭐ UPDATE STOCK IN DATABASE
         await AppDB.instance.updateProduct(row.product!);
       }
     }
 
-    int finalChange = int.tryParse(customerController.text)! - totalBill;
+    int change = int.tryParse(customerController.text)! - totalBill;
 
-    // ⭐ RESET UI AFTER SUCCESS
     setState(() {
       rows.clear();
       rows.add(RowData());
@@ -141,13 +99,22 @@ class _TestView1State extends State<TestView1> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Center(
           child: Column(
             children: [
-              Text('Sukli'),
               Text(
-                "$finalChange",
-                style: TextStyle(fontSize: 100, color: Colors.red),
+                'Sukli',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 15),
+              Text(
+                "$change",
+                style: TextStyle(
+                  fontSize: 70,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
               ),
             ],
           ),
@@ -159,215 +126,200 @@ class _TestView1State extends State<TestView1> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 1,
         title: Text(
-          '',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
+          'Honey Sari-Sari Store',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        iconTheme: IconThemeData(color: Colors.black),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.notifications),
-                  onPressed: () {
-                    showDialog(
-                     barrierColor: Colors.black.withOpacity(0.2),
-                  context: context,
-                    builder: (context) => ProductNotification(),
-                    );
-                  }, 
-                ),
-                SizedBox(width: 20,),
-                IconButton(onPressed:(){
-                   showDialog(
-                      barrierColor: Colors.black.withOpacity(0.2),
-                      context: context,
-                      builder: (context) => SearchProduct(),
-                    );
-                }, icon: Icon(Icons.search)),
-             
-                
-              ],
-            ),
+          IconButton(
+            icon: Icon(Icons.notifications, color: Colors.black),
+            onPressed: () {
+              showDialog(
+                context: context,
+                barrierColor: Colors.black.withOpacity(0.2),
+                builder: (_) => ProductNotification(),
+              );
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.search, color: Colors.black),
+            onPressed: () {
+              showDialog(
+                context: context,
+                barrierColor: Colors.black.withOpacity(0.2),
+                builder: (_) => SearchProduct(),
+              );
+            },
           ),
         ],
       ),
-
-      // ✅ Wrap drawer with callback to refresh products
-      drawer: AppDrawer(
-        onProductAdded: () async {
-          await loadProducts(); // reload products after adding
-        },
-      ),
-
-      // ✅ Wrap body with RefreshIndicator
+      drawer: AppDrawer(onProductAdded: () async => await loadProducts()),
       body: RefreshIndicator(
-        onRefresh: loadProducts, // called when user pulls down
-
+        onRefresh: loadProducts,
         child: SingleChildScrollView(
-          physics:
-              AlwaysScrollableScrollPhysics(), // allows scroll for RefreshIndicator
-          padding: const EdgeInsets.all(20.0),
+          physics: AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(16),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
-
-             IconButton(
-  icon: Icon(Icons.textsms_sharp),
-  onPressed: () {
-    bool promo = false;
-    int qty = 3;
-    int price = 1;
-
-    
-
-
-    if (!promo) {
-       print("Promo not applied for $qty items");
-
-    
-    }
-  },
-),
-
-
-              
-              SizedBox(height: 200),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Table(
-                  border: TableBorder.all(),
-                  columnWidths: const {
-                    0: FixedColumnWidth(80), // Qty
-                    1: FixedColumnWidth(150), // Item
-                    2: FixedColumnWidth(80), // Price
-                    3: FixedColumnWidth(100), // Total
-                    4: FixedColumnWidth(150), // Action buttons
-                  },
-                  children: [
-                    TableRow(
-                      children: [
-                        Text(
-                          'Qty',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Item',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Price',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Total',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          'Action',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
+              /// =====================================================================
+              /// DATA TABLE (UPDATED, SCALED, CLEAN)
+              /// =====================================================================
+              Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                elevation: 3,
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: DataTable(
+                      headingRowColor: MaterialStateProperty.all(
+                        Colors.grey[200],
+                      ),
+                      columnSpacing: 20,
+                      columns: const [
+                        DataColumn(label: Text("Item")),
+                        DataColumn(label: Text("Qty")),
+                        DataColumn(label: Text("Price")),
+                        DataColumn(label: Text("Total")),
+                        DataColumn(label: Text("")),
                       ],
-                    ),
+                      rows: rows.map((row) {
+                        int? dropdownValue = row.qty == 0 ? null : row.qty;
 
-                    ...rows.map((row) {
-                      return TableRow(
-                        children: [
-                          DropdownButton<int>(
-                            value: row.qty == 0 ? null : row.qty,
-                            isExpanded: true,
-                            underline: SizedBox(),
-                            hint: Text("0"),
-                           items: List.generate(20, (index) {
-  int step = row.product?.otherqty ?? 1;
-  if (step <= 0) step = 1;
-
-  int number = (index + 1) * step;  // multiples
-  return DropdownMenuItem(
-    value: number,
-    child: Text(number.toString()),
-  );
-}),
-
-                       onChanged: (value) {
-  setState(() {
-    row.qty = value!;
-
-    // ⭐ get the step from product.otherqty
-    if (row.product != null) {
-      int step = row.product!.otherqty;   // <-- your correct step
-      if (step <= 0) step = 1;
-
-      // ⭐ auto-correct qty to nearest valid multiple
-      if (row.qty % step != 0) {
-        row.qty = ((row.qty / step).ceil()) * step;
-        print("Corrected qty to: ${row.qty}");
-      }
-    }
-  });
-},
-
-
-                          ),
-
-                          DropdownSearch<Product>(
-                            items: dbProducts, // list of products
-                            itemAsString: (p) => p.name, // display product name
-                            selectedItem: row.product, // currently selected
-                            dropdownDecoratorProps: DropDownDecoratorProps(
-                              dropdownSearchDecoration: InputDecoration(
-                                hintText: "Select ",
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            popupProps: PopupProps.menu(
-                              showSearchBox: true, // enable search
-                              searchFieldProps: TextFieldProps(
-                                autofocus:
-                                    true, // focus the search box immediately
-                                    decoration: InputDecoration(
-                                  hintText: 'Search product...',
-                                   contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                   )
-                              ),
-                              itemBuilder: (context, item, isSelected) {
-                                return ListTile(title: Text(item.name));
-                              },
-                            ),
-                            onChanged: (p) {
-                              setState(() {
-                                row.product = p;
-                                if (row == rows.last) rows.add(RowData()); // keep adding row if last
+                        List<DropdownMenuItem<int>> qtyItems =
+                            (row.product?.promo ?? false)
+                            ? [
+                                DropdownMenuItem(
+                                  value: row.product?.otherqty ?? 1,
+                                  child: Text("${row.product?.otherqty ?? 1}"),
+                                ),
+                              ]
+                            : List.generate(20, (i) {
+                                int n = i + 1;
+                                return DropdownMenuItem(
+                                  value: n,
+                                  child: Text("$n"),
+                                );
                               });
-                            },
-                          ),
 
-                          Text(row.product?.price.toString() ?? '0'),
-                          Text(calculateTotal(row).toString()),
+                        return DataRow(
+                          cells: [
+                            /// ITEM — Fixed width + ellipsis
+                            DataCell(
+                              SizedBox(
+                                width: 270,
+                                child: DropdownSearch<Product>(
+                                  items: dbProducts,
+                                  selectedItem: row.product,
+                                  itemAsString: (p) => p.name,
+                                  dropdownBuilder: (context, p) => Text(
+                                    p?.name ?? "Select...",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  dropdownDecoratorProps:
+                                      DropDownDecoratorProps(
+                                        dropdownSearchDecoration:
+                                            InputDecoration(
+                                              border: OutlineInputBorder(),
+                                              contentPadding:
+                                                  EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                  ),
+                                            ),
+                                      ),
+                                  popupProps: PopupProps.menu(
+                                    showSearchBox: true,
+                                    searchFieldProps: TextFieldProps(
+                                      decoration: InputDecoration(
+                                        hintText: "Search...",
+                                      ),
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                    itemBuilder: (context, item, isSelected) {
+                                      return Container(
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            bottom: BorderSide(
+                                              color: Colors.grey,
+                                              width: 1,
+                                            ),
+                                          ),
+                                        ),
+                                        child: ListTile(
+                                          dense: true,
+                                          title: Text(
+                                            item.name,
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                          selected: isSelected,
+                                          contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  onChanged: (p) {
+                                    setState(() {
+                                      row.product = p;
+                                      if (row == rows.last) rows.add(RowData());
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
 
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // IconButton(
-                              //   icon: Icon(
-                              //     Icons.local_offer,
-                              //     color: promo
-                              //         ? Colors.green
-                              //         : Colors.grey,
-                              //   ),
-                              //   onPressed: () {
-                              //     setState(() {
-                              //       promo = !promo;
-                              //     });
-                              //   },
-                              // ),
+                            /// QTY — Small column
+                            DataCell(
+                              SizedBox(
+                                width: 60,
+                                child: DropdownButton<int>(
+                                  value: dropdownValue,
+                                  isExpanded: true,
+                                  underline: SizedBox(),
+                                  items: qtyItems,
+                                  onChanged: (v) =>
+                                      setState(() => row.qty = v!),
+                                ),
+                              ),
+                            ),
+
+                            /// PRICE — Narrow column
+                            DataCell(
+                              SizedBox(
+                                width: 60,
+                                child: Text(
+                                  "${row.product?.price ?? 0}",
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+
+                            /// TOTAL — Narrow column
+                            DataCell(
+                              SizedBox(
+                                width: 70,
+                                child: Text(
+                                  "${calculateTotal(row)}",
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+
+                            /// ACTION — Smallest column
+                            DataCell(
                               IconButton(
                                 icon: Icon(Icons.delete, color: Colors.red),
                                 onPressed: () {
@@ -376,20 +328,53 @@ class _TestView1State extends State<TestView1> {
                                   });
                                 },
                               ),
-                            ],
-                          ),
-                        ],
-                      );
-                    }).toList(),
+                            ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 20),
+
+              /// TOTAL BILL
+              Container(
+                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 5,
+                      color: Colors.grey.withOpacity(0.2),
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Total Bill",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      "₱$totalBill",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
                   ],
                 ),
               ),
 
-              SizedBox(height: 10),
-              Text(
-                'Total Bill: $totalBill',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
               SizedBox(height: 20),
 
               CustomerCashField(
@@ -398,36 +383,12 @@ class _TestView1State extends State<TestView1> {
                 transactionSaved: transactionSaved,
                 saveTransaction: saveTransaction,
               ),
+
+              SizedBox(height: 30),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class HomeView1 extends StatelessWidget {
-  const HomeView1({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Honey Sari-Sari Store',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-      ),
-
-      // ⭐ ADD DRAWER HERE
-      drawer: AppDrawer(),
-
-      body: Center(child: Column(children: [SizedBox(height: 50)])),
     );
   }
 }

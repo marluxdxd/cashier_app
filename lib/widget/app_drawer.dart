@@ -6,7 +6,6 @@ import 'package:cashier_app/home/view/sales_history.dart';
 import 'package:cashier_app/home/view/sales_report.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/database/database_backup.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AppDrawer extends StatefulWidget {
   
@@ -68,7 +67,7 @@ class _AppDrawerState extends State<AppDrawer> {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(color: Colors.blue),
+            decoration: BoxDecoration(color: Colors.green[700]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

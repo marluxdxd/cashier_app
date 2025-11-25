@@ -174,7 +174,7 @@ Future<void> loadProducts() async {
                           ),
                         ],
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),
