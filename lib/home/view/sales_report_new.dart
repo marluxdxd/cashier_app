@@ -9,6 +9,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
+import 'package:permission_handler/permission_handler.dart';
+
 class SalesReportView extends StatefulWidget {
   const SalesReportView({super.key});
 
@@ -36,7 +38,14 @@ class _SalesReportViewState extends State<SalesReportView> {
     if (startDate == null || endDate == null) return;
 
     final start = DateTime(startDate!.year, startDate!.month, startDate!.day);
-    final end = DateTime(endDate!.year, endDate!.month, endDate!.day, 23, 59, 59);
+    final end = DateTime(
+      endDate!.year,
+      endDate!.month,
+      endDate!.day,
+      23,
+      59,
+      59,
+    );
 
     setState(() => loading = true);
     results = await AppDB.instance.getSalesByDateRange(start, end);
@@ -47,12 +56,13 @@ class _SalesReportViewState extends State<SalesReportView> {
   Future<void> generatePDF() async {
     if (startDate == null || endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please select start and end dates")),
+        const SnackBar(content: Text("Please select start and end dates")),
       );
       return;
     }
 
     final pdf = pw.Document();
+
     final dateFormat = DateFormat('yyyy-MM-dd');
 
     // Group sales by date
@@ -69,8 +79,10 @@ class _SalesReportViewState extends State<SalesReportView> {
       pw.MultiPage(
         margin: pw.EdgeInsets.all(24),
         build: (context) => [
-          pw.Text("Sales Report",
-              style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            "Sales Report",
+            style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
+          ),
           pw.SizedBox(height: 10),
 
           pw.Text("Report From: ${dateFormat.format(startDate!)}"),
@@ -81,80 +93,111 @@ class _SalesReportViewState extends State<SalesReportView> {
           pw.SizedBox(height: 10),
 
           ...salesByDate.entries.map((entry) {
-            final date = entry.key;
-            final salesList = entry.value;
-            final dayTotal = salesList.fold(0, (sum, s) => sum + s.total);
+  final date = entry.key;
+  final sales = entry.value;
+  final dayTotal = sales.fold(0, (sum, s) => sum + s.total);
 
-            return pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(DateFormat('MMM d, yyyy').format(DateTime.parse(date)),
-                    style: pw.TextStyle(fontSize: 16)),
-                pw.SizedBox(height: 6),
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      pw.Text(
+        DateFormat('MMM d, yyyy').format(DateTime.parse(date)),
+        style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+      ),
+      pw.SizedBox(height: 6),
 
-                // Table header
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Expanded(
-                        child: pw.Text("Item",
-                            style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                    pw.Container(width: 40),
-                    pw.Text("Qty",
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                    pw.Container(width: 40),
-                    pw.Text("Price",
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                  ],
-                ),
-                pw.SizedBox(height: 4),
+      // Table header
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Expanded(
+            child: pw.Text(
+              'Item',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.SizedBox(width: 40),
+          pw.Expanded(
+            child: pw.Text(
+              'qty',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.SizedBox(width: 100),
+          pw.Text(
+            'price',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ),
+      pw.SizedBox(height: 4),
 
-                // Table rows
-                ...salesList.map((s) => pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                      children: [
-                        pw.Expanded(child: pw.Text(s.productName)),
-                        pw.Container(width: 40),
-                        pw.Text("${s.qty} pcs"),
-                        pw.Container(width: 40),
-                        pw.Text("₱${s.total}"),
-                      ],
-                    )),
+      // Table rows
+      ...sales.map((s) => pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Expanded(child: pw.Text(s.productName)),
+              pw.SizedBox(width: 40),
+              pw.Text('${s.qty} pcs'),
+              pw.SizedBox(width: 40),
+              pw.Text('₱${s.total}'),
+            ],
+          )),
 
-                pw.SizedBox(height: 6),
+      pw.SizedBox(height: 6),
+      // Day total
+      pw.Align(
+        alignment: pw.Alignment.centerRight,
+        child: pw.Text(
+          'Day Total: ₱$dayTotal',
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+        ),
+      ),
+      pw.Divider(),
+    ],
+  );
+}).toList(),
 
-                // Day total
-                pw.Align(
-                  alignment: pw.Alignment.centerRight,
-                  child: pw.Container(
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border(top: pw.BorderSide(width: 1)),
-                    ),
-                    padding: pw.EdgeInsets.only(top: 4),
-                    child: pw.Text("Day Total: ₱$dayTotal",
-                        style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                  ),
-                ),
-                pw.Divider(),
-              ],
-            );
-          }).toList(),
 
           pw.SizedBox(height: 15),
-          pw.Text("Total Sales: ₱$totalRevenue",
-              style:
-                  pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            "Total Sales: ₱$totalRevenue",
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
         ],
       ),
     );
 
-    // Save PDF to device
-    final output = await getApplicationDocumentsDirectory();
-    final file = File("${output.path}/sales_report.pdf");
-    await file.writeAsBytes(await pdf.save());
+    // Save PDF AFTER adding pages
+    final bytes = await pdf.save();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("PDF saved to ${file.path}")));
+    if (Platform.isAndroid) {
+      // request permission (you already do in backup)
+      if (!await Permission.manageExternalStorage.request().isGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Storage permission denied")));
+        return;
+      }
+
+      final dir = Directory('/storage/emulated/0/Download');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+
+      final file = File('${dir.path}/sales_report.pdf');
+      await file.writeAsBytes(bytes);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("PDF saved to ${file.path}")));
+    } else {
+      // fallback for iOS
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/sales_report.pdf');
+      await file.writeAsBytes(bytes);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("PDF saved to ${file.path}")));
+    }
   }
 
   @override
@@ -168,15 +211,13 @@ class _SalesReportViewState extends State<SalesReportView> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Sales Report"),
-      ),
+      appBar: AppBar(title: const Text("Sales Report")),
       body: Column(
         children: [
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           Text(
             "Total Revenue: ₱$totalRevenue",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
 
           // DATE PICKERS
@@ -193,9 +234,11 @@ class _SalesReportViewState extends State<SalesReportView> {
                   );
                   if (date != null) setState(() => startDate = date);
                 },
-                child: Text(startDate != null
-                    ? DateFormat('yyyy-MM-dd').format(startDate!)
-                    : 'Start Date'),
+                child: Text(
+                  startDate != null
+                      ? DateFormat('yyyy-MM-dd').format(startDate!)
+                      : 'Start Date',
+                ),
               ),
               TextButton(
                 onPressed: () async {
@@ -207,14 +250,13 @@ class _SalesReportViewState extends State<SalesReportView> {
                   );
                   if (date != null) setState(() => endDate = date);
                 },
-                child: Text(endDate != null
-                    ? DateFormat('yyyy-MM-dd').format(endDate!)
-                    : 'End Date'),
+                child: Text(
+                  endDate != null
+                      ? DateFormat('yyyy-MM-dd').format(endDate!)
+                      : 'End Date',
+                ),
               ),
-              ElevatedButton(
-                onPressed: loadSalesByRange,
-                child: Text("Load"),
-              ),
+              ElevatedButton(onPressed: loadSalesByRange, child: const Text("Load")),
             ],
           ),
 
@@ -223,16 +265,16 @@ class _SalesReportViewState extends State<SalesReportView> {
             onPressed: generatePDF,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.teal,
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
-            child: Text("Generate PDF", style: TextStyle(fontSize: 16)),
+            child: const Text("Generate PDF", style: TextStyle(fontSize: 16)),
           ),
 
           Expanded(
             child: loading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : salesByDate.isEmpty
-                    ? Center(child: Text("No sales yet"))
+                    ? const Center(child: Text("No sales yet"))
                     : ListView(
                         children: salesByDate.entries.map((entry) {
                           final date = entry.key;
@@ -242,50 +284,51 @@ class _SalesReportViewState extends State<SalesReportView> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                DateFormat('MMM d, yyyy')
-                                    .format(DateTime.parse(date)),
-                                style: TextStyle(fontSize: 16),
+                                DateFormat('MMM d, yyyy').format(DateTime.parse(date)),
+                                style: const TextStyle(fontSize: 16),
                               ),
 
                               // Table in UI
                               Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: const [
                                       Expanded(
-                                          child: Text('Item',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
+                                        child: Text(
+                                          'Item',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
                                       SizedBox(width: 40),
                                       Expanded(
-                                          child: Text('qty',
-                                              style: TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold))),
+                                        child: Text(
+                                          'qty',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
                                       SizedBox(width: 100),
-                                      Text('price',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
+                                      Text(
+                                        'price',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
                                     ],
                                   ),
-                                  ...sales.map((s) => Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text('${s.productName}'),
-                                          Text(' ${s.qty} pcs'),
-                                          SizedBox(width: 40),
-                                          Text('₱${s.total}'),
-                                        ],
-                                      )),
+                                  ...sales.map(
+                                    (s) => Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text('${s.productName}'),
+                                        Text(' ${s.qty} pcs'),
+                                        const SizedBox(width: 40),
+                                        Text('₱${s.total}'),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
-                              Divider(),
+                              const Divider(),
                             ],
                           );
                         }).toList(),
