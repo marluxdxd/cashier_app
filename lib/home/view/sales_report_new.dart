@@ -285,7 +285,7 @@ class _SalesReportViewState extends State<SalesReportView> {
                                           style: TextStyle(fontWeight: FontWeight.bold),
                                         ),
                                       ),
-                                      SizedBox(width: 40),
+                                      SizedBox(width: 30),
                                       Expanded(
                                         child: Text(
                                           'qty',
