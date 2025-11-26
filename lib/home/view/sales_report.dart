@@ -48,12 +48,18 @@ class _SalesReportViewState extends State<SalesReportView> {
     setState(() => loading = false);
   }
 
-  Future<void> loadSalesByRange() async {
-    if (startDate == null || endDate == null) return;
-    setState(() => loading = true);
-    results = await AppDB.instance.getSalesByDateRange(startDate!, endDate!);
-    setState(() => loading = false);
-  }
+Future<void> loadSalesByRange() async {
+  if (startDate == null || endDate == null) return;
+
+  // Adjust start and end to include the full days
+  final start = DateTime(startDate!.year, startDate!.month, startDate!.day);
+  final end = DateTime(endDate!.year, endDate!.month, endDate!.day, 23, 59, 59, 999);
+
+  setState(() => loading = true);
+  results = await AppDB.instance.getSalesByDateRange(start, end);
+  setState(() => loading = false);
+}
+
 
   @override
   Widget build(BuildContext context) {

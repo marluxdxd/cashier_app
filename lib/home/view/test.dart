@@ -1,46 +1,60 @@
 // import 'package:flutter/material.dart';
-// import 'package:cashier_app/home/viewModel/product.dart';
-// class ProductSearchSheet extends StatefulWidget {
-//   final List<Product> dbProducts;
+// import 'package:cashier_app/database/database_backup.dart'; // <-- import backup class
 
-//   const ProductSearchSheet({required this.dbProducts});
+// class TestBackupPage extends StatefulWidget {
+//   const TestBackupPage({super.key});
 
 //   @override
-//   State<ProductSearchSheet> createState() => _ProductSearchSheetState();
+//   State<TestBackupPage> createState() => _TestBackupPageState();
 // }
 
-// class _ProductSearchSheetState extends State<ProductSearchSheet> {
-//   TextEditingController searchCtrl = TextEditingController();
+// class _TestBackupPageState extends State<TestBackupPage> {
+//   bool isBackingUp = false; // Optional: show progress
 
 //   @override
 //   Widget build(BuildContext context) {
-//     return Column(
-//       children: [
-//         Padding(
-//           padding: const EdgeInsets.all(8.0),
-//           child: TextField(
-//             controller: searchCtrl,
-//             decoration: InputDecoration(
-//               hintText: "Search product...",
-//               prefixIcon: Icon(Icons.search),
-//             ),
-//             onChanged: (_) => setState(() {}),
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text('Test Backup'),
+//       ),
+//       body: Center(
+//         child: ElevatedButton.icon(
+//           icon: const Icon(Icons.backup),
+//           label: isBackingUp
+//               ? const Text("Backing up...")
+//               : const Text("Test Backup to Firebase"),
+//           style: ElevatedButton.styleFrom(
+//             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+//             textStyle: const TextStyle(fontSize: 16),
 //           ),
+//           onPressed: isBackingUp
+//               ? null
+//               : () async {
+//                   setState(() => isBackingUp = true);
+//                   try {
+//                     // Perform backup and upload
+//                     await DatabaseBackup.autoBackup();
+//                     if (mounted) {
+//                       ScaffoldMessenger.of(context).showSnackBar(
+//                         SnackBar(
+//                           content: Text(
+//                             "✅ Backup successful at ${DateTime.now().toLocal().toString().substring(11, 19)}",
+//                           ),
+//                         ),
+//                       );
+//                     }
+//                   } catch (e) {
+//                     if (mounted) {
+//                       ScaffoldMessenger.of(context).showSnackBar(
+//                         SnackBar(content: Text("Backup failed: $e")),
+//                       );
+//                     }
+//                   } finally {
+//                     if (mounted) setState(() => isBackingUp = false);
+//                   }
+//                 },
 //         ),
-
-//         Expanded(
-//           child: ListView(
-//             children: widget.dbProducts
-//                 .where((p) =>
-//                     p.name.toLowerCase().contains(searchCtrl.text.toLowerCase()))
-//                 .map((p) => ListTile(
-//                       title: Text(p.name),
-//                       onTap: () => Navigator.pop(context, p),
-//                     ))
-//                 .toList(),
-//           ),
-//         )
-//       ],
+//       ),
 //     );
 //   }
 // }

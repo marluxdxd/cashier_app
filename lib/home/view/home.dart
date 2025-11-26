@@ -1,4 +1,5 @@
 import 'package:cashier_app/database/app_db.dart';
+import 'package:cashier_app/widget/notificationbell.dart';
 import 'package:cashier_app/home/view/product_notification.dart';
 import 'package:cashier_app/home/viewModel/sale_service.dart';
 import 'package:cashier_app/home/view/customer_cash.dart';
@@ -19,6 +20,13 @@ class TestView1 extends StatefulWidget {
 }
 
 class _TestView1State extends State<TestView1> {
+  List<String> getLowStockItems() {
+  return dbProducts
+      .where((p) => p.qty < 10) // pick only low-stock products
+      .map((p) => "${p.name} (Qty: ${p.qty})") // convert to string
+      .toList();
+}
+  final FocusNode searchFocusNode = FocusNode();
   bool transactionSaved = false;
   List<Product> dbProducts = [];
   bool promo = false;
@@ -60,19 +68,40 @@ class _TestView1State extends State<TestView1> {
     transactionSaved = true;
     final service = SaleService();
 
+    List<String> insufficientStockProducts = [];
+   
+
+
+
+    // Check stock first
     for (var row in rows) {
       if (row.product != null && row.qty > 0) {
-        try {
-          row.product!.reduceStock(row.qty);
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(e.toString().replaceAll("Exception:", "").trim()),
-            ),
+        if (row.qty > row.product!.qty) {
+          insufficientStockProducts.add(
+            "${row.product!.name} (Available left: ${row.product!.qty})",
           );
-          transactionSaved = false;
-          return;
         }
+      }
+    }
+
+    // If there are any products with insufficient stock, show them
+    if (insufficientStockProducts.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Not enough stock for:\n${insufficientStockProducts.join('\n')}",
+          ),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      transactionSaved = false;
+      return;
+    }
+
+    // Proceed with transaction if stock is enough
+    for (var row in rows) {
+      if (row.product != null && row.qty > 0) {
+        row.product!.reduceStock(row.qty);
 
         final sale = Sale(
           productName: row.product!.name,
@@ -84,6 +113,10 @@ class _TestView1State extends State<TestView1> {
 
         await service.insertSale(sale);
         await AppDB.instance.updateProduct(row.product!);
+        
+
+           // ✅ Refresh UI so notification badge updates
+    setState(() {});
       }
     }
 
@@ -99,7 +132,7 @@ class _TestView1State extends State<TestView1> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         title: Center(
           child: Column(
             children: [
@@ -111,9 +144,9 @@ class _TestView1State extends State<TestView1> {
               Text(
                 "$change",
                 style: TextStyle(
-                  fontSize: 70,
+                  fontSize: 150,
                   fontWeight: FontWeight.bold,
-                  color: Colors.green,
+                  color: Colors.red,
                 ),
               ),
             ],
@@ -131,22 +164,27 @@ class _TestView1State extends State<TestView1> {
         backgroundColor: Colors.white,
         elevation: 1,
         title: Text(
-          'Honey Sari-Sari Store',
+          'Sari-Sari Store',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         iconTheme: IconThemeData(color: Colors.black),
         actions: [
-          IconButton(
-            icon: Icon(Icons.notifications, color: Colors.black),
-            onPressed: () {
-              showDialog(
-                context: context,
-                barrierColor: Colors.black.withOpacity(0.2),
-                builder: (_) => ProductNotification(),
-              );
-            },
-          ),
+
+NotificationBell(
+  lowItems: getLowStockItems(),
+  onPressed: () {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.2),
+      builder: (_) => ProductNotification(lowItems: getLowStockItems()),
+    );
+  },
+),
+
+
+
+
           IconButton(
             icon: Icon(Icons.search, color: Colors.black),
             onPressed: () {
@@ -166,11 +204,8 @@ class _TestView1State extends State<TestView1> {
           physics: AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              /// =====================================================================
-              /// DATA TABLE (UPDATED, SCALED, CLEAN)
-              /// =====================================================================
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -208,16 +243,17 @@ class _TestView1State extends State<TestView1> {
                                 return DropdownMenuItem(
                                   value: n,
                                   child: Text("$n"),
-                                );
-                              });
+                                   );
+                                   });
 
-                        return DataRow(
-                          cells: [
-                            /// ITEM — Fixed width + ellipsis
-                            DataCell(
-                              SizedBox(
-                                width: 270,
-                                child: DropdownSearch<Product>(
+                                   return DataRow(
+                                 cells: [
+                                  DataCell(
+                                    SizedBox(
+                                      width: 270,
+
+                                 //Item DropdownSearch
+                                 child: DropdownSearch<Product>(
                                   items: dbProducts,
                                   selectedItem: row.product,
                                   itemAsString: (p) => p.name,
@@ -241,6 +277,8 @@ class _TestView1State extends State<TestView1> {
                                   popupProps: PopupProps.menu(
                                     showSearchBox: true,
                                     searchFieldProps: TextFieldProps(
+                                      focusNode: searchFocusNode,
+                                       autofocus: true, 
                                       decoration: InputDecoration(
                                         hintText: "Search...",
                                       ),
@@ -274,6 +312,16 @@ class _TestView1State extends State<TestView1> {
                                   onChanged: (p) {
                                     setState(() {
                                       row.product = p;
+
+                                      // Auto-set qty for promo products
+                                      if (row.product != null) {
+                                        if (row.product!.promo) {
+                                          row.qty = row.product!.otherqty;
+                                        } else if (row.qty == 0) {
+                                          row.qty = 1;
+                                        }
+                                      }
+
                                       if (row == rows.last) rows.add(RowData());
                                     });
                                   },
@@ -281,22 +329,65 @@ class _TestView1State extends State<TestView1> {
                               ),
                             ),
 
-                            /// QTY — Small column
+                            //Qty DropdownSearch
                             DataCell(
                               SizedBox(
                                 width: 60,
-                                child: DropdownButton<int>(
-                                  value: dropdownValue,
-                                  isExpanded: true,
-                                  underline: SizedBox(),
-                                  items: qtyItems,
-                                  onChanged: (v) =>
-                                      setState(() => row.qty = v!),
+                                child: DropdownSearch<int>(
+                                  // The quantity options
+                                  items: qtyItems.map((e) => e.value!).toList(),
+                                  selectedItem: row.qty, // current qty
+                                  popupProps: PopupProps.menu(
+                                    showSearchBox: true,
+                                    searchFieldProps: TextFieldProps(
+                                      keyboardType: TextInputType.number,
+                                      autofocus: true,
+                                      decoration: InputDecoration(
+                                        hintText: "Search...",
+                                      ),
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                    itemBuilder: (context, item, isSelected) {
+                                      return Container(
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          border: Border(
+                                            bottom: BorderSide(
+                                              color: Colors.grey,
+                                              width: 1,
+                                            ),
+                                          ),
+                                        ),
+                                        child: ListTile(
+                                          dense: true,
+                                          title: Text(
+                                            "$item",
+                                            style: TextStyle(fontSize: 12),
+                                          ),
+                                          selected: isSelected,
+                                          contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 5,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  dropdownBuilder: (context, selectedQty) {
+                                    return Text(
+                                      "$selectedQty",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14),
+                                    );
+                                  },
+                                  onChanged: (v) {
+                                    setState(() {
+                                      if (v != null) row.qty = v;
+                                    });
+                                  },
                                 ),
                               ),
                             ),
 
-                            /// PRICE — Narrow column
                             DataCell(
                               SizedBox(
                                 width: 60,
@@ -306,8 +397,6 @@ class _TestView1State extends State<TestView1> {
                                 ),
                               ),
                             ),
-
-                            /// TOTAL — Narrow column
                             DataCell(
                               SizedBox(
                                 width: 70,
@@ -317,8 +406,6 @@ class _TestView1State extends State<TestView1> {
                                 ),
                               ),
                             ),
-
-                            /// ACTION — Smallest column
                             DataCell(
                               IconButton(
                                 icon: Icon(Icons.delete, color: Colors.red),
@@ -336,10 +423,7 @@ class _TestView1State extends State<TestView1> {
                   ),
                 ),
               ),
-
               SizedBox(height: 20),
-
-              /// TOTAL BILL
               Container(
                 padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 decoration: BoxDecoration(
@@ -368,22 +452,19 @@ class _TestView1State extends State<TestView1> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                        color: Colors.red,
                       ),
                     ),
                   ],
                 ),
               ),
-
               SizedBox(height: 20),
-
               CustomerCashField(
                 controller: customerController,
                 totalBill: totalBill,
                 transactionSaved: transactionSaved,
                 saveTransaction: saveTransaction,
               ),
-
               SizedBox(height: 30),
             ],
           ),

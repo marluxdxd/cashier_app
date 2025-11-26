@@ -67,7 +67,7 @@ class _AppDrawerState extends State<AppDrawer> {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(color: Colors.green[700]),
+            decoration: BoxDecoration(color: Colors.teal[100]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

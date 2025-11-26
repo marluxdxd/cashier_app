@@ -29,11 +29,11 @@ class Product {
   // Reduce stock after a sale
   void reduceStock(int soldQty) {
     if (qty <= 0) {
-      throw Exception("No stock, please add stock");
+      throw Exception("$name: No stock, please add stock");
     }
 
     if (soldQty > qty) {
-      throw Exception("Not enough stock. Available: $qty");
+      throw Exception("$name: Not enough stock. Available: $qty");
     }
 
     qty -= soldQty;
