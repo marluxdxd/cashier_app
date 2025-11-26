@@ -62,7 +62,6 @@ class _SalesReportViewState extends State<SalesReportView> {
     }
 
     final pdf = pw.Document();
-
     final dateFormat = DateFormat('yyyy-MM-dd');
 
     // Group sales by date
@@ -75,24 +74,21 @@ class _SalesReportViewState extends State<SalesReportView> {
 
     final totalRevenue = results.fold(0, (sum, s) => sum + s.total);
 
+    // Build PDF content
     pdf.addPage(
       pw.MultiPage(
-        margin: pw.EdgeInsets.all(24),
+        margin: const pw.EdgeInsets.all(24),
         build: (context) => [
           pw.Text(
             "Sales Report",
             style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
           ),
-          pw.SizedBox(height: 10),
-
+          pw.SizedBox(height: 5),
           pw.Text("Report From: ${dateFormat.format(startDate!)}"),
           pw.Text("Report To      : ${dateFormat.format(endDate!)}"),
           pw.Divider(),
           pw.SizedBox(height: 10),
-          pw.Text("(Date here)"),
-          pw.SizedBox(height: 10),
-
-          ...salesByDate.entries.map((entry) {
+         ...salesByDate.entries.map((entry) {
   final date = entry.key;
   final sales = entry.value;
   final dayTotal = sales.fold(0, (sum, s) => sum + s.total);
@@ -104,99 +100,87 @@ class _SalesReportViewState extends State<SalesReportView> {
         DateFormat('MMM d, yyyy').format(DateTime.parse(date)),
         style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
       ),
-      pw.SizedBox(height: 6),
+   
 
-      // Table header
-      pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      // Table in PDF (mimic your UI)
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Expanded(
-            child: pw.Text(
-              'Item',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            ),
-          ),
-          pw.SizedBox(width: 40),
-          pw.Expanded(
-            child: pw.Text(
-              'qty',
-              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-            ),
-          ),
-          pw.SizedBox(width: 100),
-          pw.Text(
-            'price',
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-          ),
-        ],
-      ),
-      pw.SizedBox(height: 4),
-
-      // Table rows
-      ...sales.map((s) => pw.Row(
+          pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Expanded(child: pw.Text(s.productName)),
+              pw.Expanded(
+                child: pw.Text(
+                  'Item',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+              ),
               pw.SizedBox(width: 40),
-              pw.Text('${s.qty} pcs'),
-              pw.SizedBox(width: 40),
-              pw.Text('₱${s.total}'),
+              pw.Expanded(
+                child: pw.Text(
+                  'qty',
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+              pw.SizedBox(width: 100),
+              pw.Text(
+                'price',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+              ),
             ],
-          )),
-
-      pw.SizedBox(height: 6),
-      // Day total
-      pw.Align(
-        alignment: pw.Alignment.centerRight,
-        child: pw.Text(
-          'Day Total: ₱$dayTotal',
-          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-        ),
+          ),
+          ...sales.map(
+            (s) => pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(s.productName),
+                pw.Text('${s.qty} pcs'),
+                pw.SizedBox(width: 40),
+                pw.Text('₱${s.total}'),
+              ],
+            ),
+          ),
+        ],
       ),
       pw.Divider(),
     ],
   );
 }).toList(),
 
-
-          pw.SizedBox(height: 15),
-          pw.Text(
+          pw.SizedBox(height: 5, width: 200),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.end,
+            children: [
+             pw.Text(
             "Total Sales: ₱$totalRevenue",
             style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
           ),
+          ]
+          ),
+         
         ],
       ),
     );
 
-    // Save PDF AFTER adding pages
-    final bytes = await pdf.save();
-
+    // Save PDF to Downloads folder on Android
     if (Platform.isAndroid) {
-      // request permission (you already do in backup)
       if (!await Permission.manageExternalStorage.request().isGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Storage permission denied")));
+          const SnackBar(content: Text("Storage permission denied")),
+        );
         return;
       }
 
       final dir = Directory('/storage/emulated/0/Download');
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-      }
+      if (!await dir.exists()) await dir.create(recursive: true);
 
-      final file = File('${dir.path}/sales_report.pdf');
+      final file = File('${dir.path}/sales_reports3.pdf');
+      final bytes = await pdf.save();
       await file.writeAsBytes(bytes);
 
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("PDF saved to ${file.path}")));
-    } else {
-      // fallback for iOS
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/sales_report.pdf');
-      await file.writeAsBytes(bytes);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("PDF saved to ${file.path}")));
+        SnackBar(content: Text("PDF saved to ${file.path}")),
+      );
     }
   }
 
