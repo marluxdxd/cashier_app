@@ -257,20 +257,7 @@ class _TestView1State extends State<TestView1> {
             children: [
               SizedBox(height: 50),
               // keep small dropdown (unchanged)
-              DropdownButton<String>(
-                value: selectedValue,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedValue = newValue!;
-                  });
-                },
-                items: fruits.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
+             
 
               // Card containing responsive rows
               Card(
