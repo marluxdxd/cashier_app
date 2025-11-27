@@ -20,14 +20,8 @@ class TestView1 extends StatefulWidget {
 }
 
 class _TestView1State extends State<TestView1> {
-  String? selectedValue;
 
-  // ✅ Updated: lists of keys for each row
-  List<GlobalKey<DropdownSearchState<Product>>> productDropdownKeys = [];
-  List<GlobalKey<DropdownSearchState<int>>> qtyDropdownKeys = [];
-
-  List<String> fruits = ['Apple', 'Banana', 'Cherry', 'Date'];
-
+   List<String> fruits = ['Apple', 'Banana', 'Cherry', 'Date'];
   List<String> getLowStockItems() {
     return dbProducts
         .where((p) => p.qty < 10) // pick only low-stock products
@@ -36,9 +30,10 @@ class _TestView1State extends State<TestView1> {
   }
 
   // Focus nodes for item, quantity, and customer cash
-  final FocusNode searchFocusNode = FocusNode();
-  final FocusNode qtyFocusNode = FocusNode();
-  final FocusNode customerCashFocusNode = FocusNode();
+  final FocusNode searchFocusNode = FocusNode(); // Focus for item dropdown
+  final FocusNode qtyFocusNode = FocusNode(); // Focus for qty dropdown
+  final FocusNode customerCashFocusNode =
+      FocusNode(); // Focus for customer cash input
 
   bool transactionSaved = false;
   List<Product> dbProducts = [];
@@ -48,10 +43,6 @@ class _TestView1State extends State<TestView1> {
   void initState() {
     super.initState();
     loadProducts();
-
-    // Initialize keys for the first row
-    productDropdownKeys.add(GlobalKey<DropdownSearchState<Product>>());
-    qtyDropdownKeys.add(GlobalKey<DropdownSearchState<int>>());
   }
 
   Future<void> loadProducts() async {
@@ -59,14 +50,6 @@ class _TestView1State extends State<TestView1> {
     final productsFromDB = await AppDB.instance.fetchProducts();
     setState(() {
       dbProducts = productsFromDB;
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (productDropdownKeys.isNotEmpty &&
-          dbProducts.isNotEmpty &&
-          productDropdownKeys[0].currentState != null) {
-        productDropdownKeys[0].currentState!.openDropDownSearch();
-      }
     });
   }
 
@@ -77,13 +60,9 @@ class _TestView1State extends State<TestView1> {
       rows.add(RowData());
       customerController.clear();
       transactionSaved = false;
-
-      // Reset keys
-      productDropdownKeys = [GlobalKey<DropdownSearchState<Product>>()];
-      qtyDropdownKeys = [GlobalKey<DropdownSearchState<int>>()];
     });
 
-    await loadProducts();
+    await loadProducts(); // reload DB
   }
 
   int calculateTotal(RowData row) {
@@ -111,6 +90,7 @@ class _TestView1State extends State<TestView1> {
 
     List<String> insufficientStockProducts = [];
 
+    // Check stock first
     for (var row in rows) {
       if (row.product != null && row.qty > 0) {
         if (row.qty > row.product!.qty) {
@@ -121,6 +101,7 @@ class _TestView1State extends State<TestView1> {
       }
     }
 
+    // If there are any products with insufficient stock, show them
     if (insufficientStockProducts.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -134,6 +115,7 @@ class _TestView1State extends State<TestView1> {
       return;
     }
 
+    // Proceed with transaction if stock is enough
     for (var row in rows) {
       if (row.product != null && row.qty > 0) {
         row.product!.reduceStock(row.qty);
@@ -149,6 +131,7 @@ class _TestView1State extends State<TestView1> {
         await service.insertSale(sale);
         await AppDB.instance.updateProduct(row.product!);
 
+        // ✅ Refresh UI so notification badge updates
         setState(() {});
       }
     }
@@ -160,10 +143,6 @@ class _TestView1State extends State<TestView1> {
       rows.add(RowData());
       customerController.clear();
       transactionSaved = false;
-
-      // Reset keys
-      productDropdownKeys = [GlobalKey<DropdownSearchState<Product>>()];
-      qtyDropdownKeys = [GlobalKey<DropdownSearchState<int>>()];
     });
 
     showDialog(
@@ -195,8 +174,6 @@ class _TestView1State extends State<TestView1> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-final isSmall = screenWidth < 380;  // you can adjust value later
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -241,7 +218,19 @@ final isSmall = screenWidth < 380;  // you can adjust value later
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-         SizedBox(height: 50,),
+         
+
+              TextField(
+                // NEW
+                autofocus: true, // NEW
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: "Qty",
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {},
+              ),
+
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -261,11 +250,9 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                         DataColumn(label: Text("Qty")),
                         DataColumn(label: Text("Price")),
                         DataColumn(label: Text("Total")),
-                        DataColumn(label: Text("Remove")),
+                        DataColumn(label: Text("")),
                       ],
                       rows: rows.map((row) {
-                        int index = rows.indexOf(row); // ✅ Row index
-
                         int? dropdownValue = row.qty == 0 ? null : row.qty;
 
                         List<DropdownMenuItem<int>> qtyItems =
@@ -290,7 +277,6 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                               SizedBox(
                                 width: 270,
                                 child: DropdownSearch<Product>(
-                                  key: productDropdownKeys[index],
                                   items: dbProducts,
                                   selectedItem: row.product,
                                   itemAsString: (p) => p.name,
@@ -313,10 +299,6 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                                       ),
                                   popupProps: PopupProps.menu(
                                     showSearchBox: true,
-                                    emptyBuilder: (context, searchEntry) =>
-                                        Center(
-                                          child: Text("Loading products..."),
-                                        ),
                                     searchFieldProps: TextFieldProps(
                                       focusNode: searchFocusNode,
                                       autofocus: true,
@@ -354,6 +336,7 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                                     setState(() {
                                       row.product = p;
 
+                                      // Auto-set qty for promo products
                                       if (row.product != null) {
                                         if (row.product!.promo) {
                                           row.qty = row.product!.otherqty;
@@ -362,32 +345,12 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                                         }
                                       }
 
+                                      // Move focus to qty field after selecting item
                                       FocusScope.of(
                                         context,
                                       ).requestFocus(qtyFocusNode);
 
-                                      // ✅ Open qty dropdown for this row
-                                      if (qtyDropdownKeys[index].currentState !=
-                                          null) {
-                                        WidgetsBinding.instance
-                                            .addPostFrameCallback((_) {
-                                              qtyDropdownKeys[index]
-                                                  .currentState!
-                                                  .openDropDownSearch();
-                                            });
-                                      }
-
-                                      if (row == rows.last) {
-                                        rows.add(RowData());
-                                        productDropdownKeys.add(
-                                          GlobalKey<
-                                            DropdownSearchState<Product>
-                                          >(),
-                                        );
-                                        qtyDropdownKeys.add(
-                                          GlobalKey<DropdownSearchState<int>>(),
-                                        );
-                                      }
+                                      if (row == rows.last) rows.add(RowData());
                                     });
                                   },
                                 ),
@@ -397,14 +360,14 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                               SizedBox(
                                 width: 60,
                                 child: DropdownSearch<int>(
-                                  key: qtyDropdownKeys[index],
                                   items: qtyItems.map((e) => e.value!).toList(),
                                   selectedItem: row.qty,
                                   popupProps: PopupProps.menu(
                                     showSearchBox: true,
                                     searchFieldProps: TextFieldProps(
                                       keyboardType: TextInputType.number,
-                                      focusNode: qtyFocusNode,
+                                      focusNode:
+                                          qtyFocusNode, // Focus for quantity dropdown
                                       autofocus: true,
                                       decoration: InputDecoration(
                                         hintText: "Search...",
@@ -446,6 +409,8 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                                   onChanged: (v) {
                                     setState(() {
                                       if (v != null) row.qty = v;
+
+                                      // Move focus to customer cash field after selecting quantity
                                       FocusScope.of(
                                         context,
                                       ).requestFocus(customerCashFocusNode);
@@ -530,7 +495,7 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                 totalBill: totalBill,
                 transactionSaved: transactionSaved,
                 saveTransaction: saveTransaction,
-                focusNode: customerCashFocusNode,
+                focusNode: customerCashFocusNode, // Pass the FocusNode here
               ),
               SizedBox(height: 30),
             ],
@@ -540,4 +505,3 @@ final isSmall = screenWidth < 380;  // you can adjust value later
     );
   }
 }
-//ORIGINAL

@@ -6,18 +6,24 @@ class CustomerCashField extends StatelessWidget {
   final bool transactionSaved;
   final VoidCallback saveTransaction;
 
+  // NEW: accept focus node
+  final FocusNode? focusNode;
+
   const CustomerCashField({
     super.key,
     required this.controller,
     required this.totalBill,
     required this.transactionSaved,
     required this.saveTransaction,
+    this.focusNode, // NEW
   });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,               // NEW
+      autofocus: false,                    // NEW
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: "Customer Cash",
