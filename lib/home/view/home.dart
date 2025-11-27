@@ -22,7 +22,7 @@ class TestView1 extends StatefulWidget {
 class _TestView1State extends State<TestView1> {
   String? selectedValue;
 
-  // ✅ Updated: lists of keys for each row
+  // lists of keys for each row
   List<GlobalKey<DropdownSearchState<Product>>> productDropdownKeys = [];
   List<GlobalKey<DropdownSearchState<int>>> qtyDropdownKeys = [];
 
@@ -44,14 +44,18 @@ class _TestView1State extends State<TestView1> {
   List<Product> dbProducts = [];
   bool promo = false;
 
+  // local rows state (keeps behavior predictable)
+  List<RowData> rows = [];
+
   @override
   void initState() {
     super.initState();
-    loadProducts();
-
-    // Initialize keys for the first row
+    // initialize rows and keys
+    rows.add(RowData());
     productDropdownKeys.add(GlobalKey<DropdownSearchState<Product>>());
     qtyDropdownKeys.add(GlobalKey<DropdownSearchState<int>>());
+
+    loadProducts();
   }
 
   Future<void> loadProducts() async {
@@ -193,10 +197,20 @@ class _TestView1State extends State<TestView1> {
     );
   }
 
+  // helper to add a new row and matching keys
+  void _addEmptyRow() {
+    setState(() {
+      rows.add(RowData());
+      productDropdownKeys.add(GlobalKey<DropdownSearchState<Product>>());
+      qtyDropdownKeys.add(GlobalKey<DropdownSearchState<int>>());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-final isSmall = screenWidth < 380;  // you can adjust value later
+    final isSmall = screenWidth < 380; // responsive trigger, adjust as needed
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -241,7 +255,24 @@ final isSmall = screenWidth < 380;  // you can adjust value later
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-         SizedBox(height: 50,),
+              SizedBox(height: 50),
+              // keep small dropdown (unchanged)
+              DropdownButton<String>(
+                value: selectedValue,
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedValue = newValue!;
+                  });
+                },
+                items: fruits.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              ),
+
+              // Card containing responsive rows
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -249,247 +280,347 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                 elevation: 3,
                 child: Padding(
                   padding: EdgeInsets.all(12),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(
-                        Colors.grey[200],
-                      ),
-                      columnSpacing: 20,
-                      columns: const [
-                        DataColumn(label: Text("Item")),
-                        DataColumn(label: Text("Qty")),
-                        DataColumn(label: Text("Price")),
-                        DataColumn(label: Text("Total")),
-                        DataColumn(label: Text("Remove")),
-                      ],
-                      rows: rows.map((row) {
-                        int index = rows.indexOf(row); // ✅ Row index
+                  child: Column(
+                    children: [
+                      // header for wide screens
+                      if (!isSmall)
+                        Container(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          color: Colors.grey[200],
+                          child: Row(
+                            children: [
+                              Expanded(flex: 5, child: Text("Item")),
+                              SizedBox(width: 8),
+                              Expanded(flex: 2, child: Text("Qty", textAlign: TextAlign.center)),
+                              SizedBox(width: 8),
+                              Expanded(flex: 2, child: Text("Price", textAlign: TextAlign.center)),
+                              SizedBox(width: 8),
+                              Expanded(flex: 2, child: Text("Total", textAlign: TextAlign.center)),
+                              SizedBox(width: 8),
+                              SizedBox(width: 40, child: Text("", textAlign: TextAlign.center)),
+                            ],
+                          ),
+                        ),
 
-                        int? dropdownValue = row.qty == 0 ? null : row.qty;
+                      SizedBox(height: 8),
 
-                        List<DropdownMenuItem<int>> qtyItems =
-                            (row.product?.promo ?? false)
-                            ? [
-                                DropdownMenuItem(
-                                  value: row.product?.otherqty ?? 1,
-                                  child: Text("${row.product?.otherqty ?? 1}"),
-                                ),
-                              ]
-                            : List.generate(20, (i) {
-                                int n = i + 1;
-                                return DropdownMenuItem(
-                                  value: n,
-                                  child: Text("$n"),
-                                );
-                              });
+                      // rows
+                      ...rows.map((row) {
+                        int index = rows.indexOf(row);
+                        List<int> qtyItems = (row.product?.promo ?? false)
+                            ? [row.product?.otherqty ?? 1]
+                            : List.generate(20, (i) => i + 1);
 
-                        return DataRow(
-                          cells: [
-                            DataCell(
-                              SizedBox(
-                                width: 270,
-                                child: DropdownSearch<Product>(
-                                  key: productDropdownKeys[index],
-                                  items: dbProducts,
-                                  selectedItem: row.product,
-                                  itemAsString: (p) => p.name,
-                                  dropdownBuilder: (context, p) => Text(
-                                    p?.name ?? "Select...",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 14),
-                                  ),
-                                  dropdownDecoratorProps:
-                                      DropDownDecoratorProps(
-                                        dropdownSearchDecoration:
-                                            InputDecoration(
-                                              border: OutlineInputBorder(),
-                                              contentPadding:
-                                                  EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                  ),
-                                            ),
-                                      ),
-                                  popupProps: PopupProps.menu(
-                                    showSearchBox: true,
-                                    emptyBuilder: (context, searchEntry) =>
-                                        Center(
-                                          child: Text("Loading products..."),
+                        // ensure keys lists are in sync
+                        if (productDropdownKeys.length <= index) {
+                          productDropdownKeys.add(GlobalKey<DropdownSearchState<Product>>());
+                        }
+                        if (qtyDropdownKeys.length <= index) {
+                          qtyDropdownKeys.add(GlobalKey<DropdownSearchState<int>>());
+                        }
+
+                        if (isSmall) {
+                          // Compact A2 layout: Item + Qty on first line, Price/Total/Delete on second line
+                          return Container(
+                            margin: EdgeInsets.only(bottom: 12),
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    // Item (takes most space)
+                                    Expanded(
+                                      flex: 6,
+                                      child: DropdownSearch<Product>(
+                                        key: productDropdownKeys[index],
+                                        items: dbProducts,
+                                        selectedItem: row.product,
+                                        itemAsString: (p) => p.name,
+                                        dropdownBuilder: (context, p) => Text(
+                                          p?.name ?? "Select...",
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 14),
                                         ),
-                                    searchFieldProps: TextFieldProps(
-                                      focusNode: searchFocusNode,
-                                      autofocus: true,
-                                      decoration: InputDecoration(
-                                        hintText: "Search...",
-                                      ),
-                                      style: TextStyle(fontSize: 14),
-                                    ),
-                                    itemBuilder: (context, item, isSelected) {
-                                      return Container(
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          border: Border(
-                                            bottom: BorderSide(
-                                              color: Colors.grey,
-                                              width: 1,
-                                            ),
+                                        dropdownDecoratorProps: DropDownDecoratorProps(
+                                          dropdownSearchDecoration: InputDecoration(
+                                            border: OutlineInputBorder(),
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 8),
                                           ),
                                         ),
-                                        child: ListTile(
-                                          dense: true,
-                                          title: Text(
-                                            item.name,
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                          selected: isSelected,
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 5,
+                                        popupProps: PopupProps.menu(
+                                          showSearchBox: true,
+                                          emptyBuilder: (context, searchEntry) => Center(child: Text("Loading products...")),
+                                          searchFieldProps: TextFieldProps(
+                                            focusNode: searchFocusNode,
+                                            autofocus: true,
+                                            decoration: InputDecoration(hintText: "Search..."),
+                                            style: TextStyle(fontSize: 14),
                                           ),
                                         ),
-                                      );
-                                    },
-                                  ),
-                                  onChanged: (p) {
-                                    setState(() {
-                                      row.product = p;
+                                        onChanged: (p) {
+                                          setState(() {
+                                            row.product = p;
+                                            if (row.product != null) {
+                                              if (row.product!.promo) {
+                                                row.qty = row.product!.otherqty;
+                                              } else if (row.qty == 0) {
+                                                row.qty = 1;
+                                              }
+                                            }
 
-                                      if (row.product != null) {
-                                        if (row.product!.promo) {
-                                          row.qty = row.product!.otherqty;
-                                        } else if (row.qty == 0) {
-                                          row.qty = 1;
-                                        }
-                                      }
+                                            // focus qty
+                                            FocusScope.of(context).requestFocus(qtyFocusNode);
 
-                                      FocusScope.of(
-                                        context,
-                                      ).requestFocus(qtyFocusNode);
-
-                                      // ✅ Open qty dropdown for this row
-                                      if (qtyDropdownKeys[index].currentState !=
-                                          null) {
-                                        WidgetsBinding.instance
-                                            .addPostFrameCallback((_) {
-                                              qtyDropdownKeys[index]
-                                                  .currentState!
-                                                  .openDropDownSearch();
+                                            // try to open qty dropdown for this row
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              if (qtyDropdownKeys[index].currentState != null) {
+                                                qtyDropdownKeys[index].currentState!.openDropDownSearch();
+                                              }
                                             });
-                                      }
 
-                                      if (row == rows.last) {
-                                        rows.add(RowData());
-                                        productDropdownKeys.add(
-                                          GlobalKey<
-                                            DropdownSearchState<Product>
-                                          >(),
-                                        );
-                                        qtyDropdownKeys.add(
-                                          GlobalKey<DropdownSearchState<int>>(),
-                                        );
-                                      }
-                                    });
-                                  },
-                                ),
-                              ),
-                            ),
-                            DataCell(
-                              SizedBox(
-                                width: 60,
-                                child: DropdownSearch<int>(
-                                  key: qtyDropdownKeys[index],
-                                  items: qtyItems.map((e) => e.value!).toList(),
-                                  selectedItem: row.qty,
-                                  popupProps: PopupProps.menu(
-                                    showSearchBox: true,
-                                    searchFieldProps: TextFieldProps(
-                                      keyboardType: TextInputType.number,
-                                      focusNode: qtyFocusNode,
-                                      autofocus: true,
-                                      decoration: InputDecoration(
-                                        hintText: "Search...",
+                                            // add new row if last
+                                            if (row == rows.last) {
+                                              _addEmptyRow();
+                                            }
+                                          });
+                                        },
                                       ),
+                                    ),
+
+                                    SizedBox(width: 8),
+
+                                    // Qty (compact, beside item)
+                                    Expanded(
+                                      flex: 2,
+                                      child: DropdownSearch<int>(
+                                        key: qtyDropdownKeys[index],
+                                        items: qtyItems,
+                                        selectedItem: row.qty,
+                                        popupProps: PopupProps.menu(
+                                          showSearchBox: true,
+                                          searchFieldProps: TextFieldProps(
+                                            keyboardType: TextInputType.number,
+                                            focusNode: qtyFocusNode,
+                                            autofocus: false,
+                                            decoration: InputDecoration(hintText: "Qty"),
+                                            style: TextStyle(fontSize: 14),
+                                          ),
+                                        ),
+                                        dropdownBuilder: (context, selectedQty) {
+                                          return Text(
+                                            "${selectedQty ?? ''}",
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(fontSize: 14),
+                                          );
+                                        },
+                                        onChanged: (v) {
+                                          setState(() {
+                                            if (v != null) row.qty = v;
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                SizedBox(height: 10),
+
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    // Price
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        "₱${row.product?.price ?? 0}",
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+
+                                    // Total
+                                    Expanded(
+                                      flex: 3,
+                                      child: Text(
+                                        "₱${calculateTotal(row)}",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.red,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Delete
+                                    IconButton(
+                                      icon: Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () {
+                                        setState(() {
+                                          if (rows.length > 1) {
+                                            rows.removeAt(index);
+                                            // keep keys in sync
+                                            if (productDropdownKeys.length > index) productDropdownKeys.removeAt(index);
+                                            if (qtyDropdownKeys.length > index) qtyDropdownKeys.removeAt(index);
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          // Wide layout (single-line row)
+                          return Container(
+                            margin: EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 5,
+                                  child: DropdownSearch<Product>(
+                                    key: productDropdownKeys[index],
+                                    items: dbProducts,
+                                    selectedItem: row.product,
+                                    itemAsString: (p) => p.name,
+                                    dropdownBuilder: (context, p) => Text(
+                                      p?.name ?? "Select...",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(fontSize: 14),
                                     ),
-                                    itemBuilder: (context, item, isSelected) {
-                                      return Container(
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          border: Border(
-                                            bottom: BorderSide(
-                                              color: Colors.grey,
-                                              width: 1,
-                                            ),
-                                          ),
-                                        ),
-                                        child: ListTile(
-                                          dense: true,
-                                          title: Text(
-                                            "$item",
-                                            style: TextStyle(fontSize: 12),
-                                          ),
-                                          selected: isSelected,
-                                          contentPadding: EdgeInsets.symmetric(
-                                            horizontal: 5,
-                                          ),
-                                        ),
-                                      );
+                                    dropdownDecoratorProps: DropDownDecoratorProps(
+                                      dropdownSearchDecoration: InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                                      ),
+                                    ),
+                                    popupProps: PopupProps.menu(
+                                      showSearchBox: true,
+                                      emptyBuilder: (context, searchEntry) => Center(child: Text("Loading products...")),
+                                      searchFieldProps: TextFieldProps(
+                                        focusNode: searchFocusNode,
+                                        autofocus: true,
+                                        decoration: InputDecoration(hintText: "Search..."),
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                    onChanged: (p) {
+                                      setState(() {
+                                        row.product = p;
+                                        if (row.product != null) {
+                                          if (row.product!.promo) {
+                                            row.qty = row.product!.otherqty;
+                                          } else if (row.qty == 0) {
+                                            row.qty = 1;
+                                          }
+                                        }
+
+                                        // focus qty
+                                        FocusScope.of(context).requestFocus(qtyFocusNode);
+
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          if (qtyDropdownKeys[index].currentState != null) {
+                                            qtyDropdownKeys[index].currentState!.openDropDownSearch();
+                                          }
+                                        });
+
+                                        if (row == rows.last) {
+                                          _addEmptyRow();
+                                        }
+                                      });
                                     },
                                   ),
-                                  dropdownBuilder: (context, selectedQty) {
-                                    return Text(
-                                      "$selectedQty",
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(fontSize: 14),
-                                    );
-                                  },
-                                  onChanged: (v) {
-                                    setState(() {
-                                      if (v != null) row.qty = v;
-                                      FocusScope.of(
-                                        context,
-                                      ).requestFocus(customerCashFocusNode);
-                                    });
-                                  },
                                 ),
-                              ),
-                            ),
-                            DataCell(
-                              SizedBox(
-                                width: 60,
-                                child: Text(
-                                  "${row.product?.price ?? 0}",
-                                  textAlign: TextAlign.center,
+
+                                SizedBox(width: 8),
+
+                                Expanded(
+                                  flex: 2,
+                                  child: DropdownSearch<int>(
+                                    key: qtyDropdownKeys[index],
+                                    items: qtyItems,
+                                    selectedItem: row.qty,
+                                    popupProps: PopupProps.menu(
+                                      showSearchBox: true,
+                                      searchFieldProps: TextFieldProps(
+                                        keyboardType: TextInputType.number,
+                                        focusNode: qtyFocusNode,
+                                        autofocus: false,
+                                        decoration: InputDecoration(hintText: "Qty"),
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                    dropdownBuilder: (context, selectedQty) {
+                                      return Text(
+                                        "${selectedQty ?? ''}",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(fontSize: 14),
+                                      );
+                                    },
+                                    onChanged: (v) {
+                                      setState(() {
+                                        if (v != null) row.qty = v;
+                                      });
+                                    },
+                                  ),
                                 ),
-                              ),
-                            ),
-                            DataCell(
-                              SizedBox(
-                                width: 70,
-                                child: Text(
-                                  "${calculateTotal(row)}",
-                                  textAlign: TextAlign.center,
+
+                                SizedBox(width: 8),
+
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    "₱${row.product?.price ?? 0}",
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
-                              ),
+
+                                SizedBox(width: 8),
+
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    "₱${calculateTotal(row)}",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                                  ),
+                                ),
+
+                                SizedBox(width: 8),
+
+                                SizedBox(
+                                  width: 40,
+                                  child: IconButton(
+                                    icon: Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () {
+                                      setState(() {
+                                        if (rows.length > 1) {
+                                          rows.removeAt(index);
+                                          if (productDropdownKeys.length > index) productDropdownKeys.removeAt(index);
+                                          if (qtyDropdownKeys.length > index) qtyDropdownKeys.removeAt(index);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
-                            DataCell(
-                              IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
-                                onPressed: () {
-                                  setState(() {
-                                    if (rows.length > 1) rows.remove(row);
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        );
+                          );
+                        }
                       }).toList(),
-                    ),
+                    ],
                   ),
                 ),
               ),
+
               SizedBox(height: 20),
+
               Container(
                 padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                 decoration: BoxDecoration(
@@ -524,7 +655,9 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                   ],
                 ),
               ),
+
               SizedBox(height: 20),
+
               CustomerCashField(
                 controller: customerController,
                 totalBill: totalBill,
@@ -532,6 +665,7 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                 saveTransaction: saveTransaction,
                 focusNode: customerCashFocusNode,
               ),
+
               SizedBox(height: 30),
             ],
           ),
@@ -540,4 +674,3 @@ final isSmall = screenWidth < 380;  // you can adjust value later
     );
   }
 }
-//ORIGINAL
