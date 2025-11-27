@@ -145,7 +145,7 @@ class _SalesReportViewState extends State<SalesReportView> {
       pw.Divider(),
     ],
   );
-}).toList(),
+}),
 
           pw.SizedBox(height: 5, width: 200),
           pw.Row(
@@ -303,7 +303,7 @@ class _SalesReportViewState extends State<SalesReportView> {
                                     (s) => Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text('${s.productName}'),
+                                        Text(s.productName),
                                         Text(' ${s.qty} pcs'),
                                         const SizedBox(width: 40),
                                         Text('₱${s.total}'),

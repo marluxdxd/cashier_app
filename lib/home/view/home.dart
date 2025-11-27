@@ -252,7 +252,7 @@ final isSmall = screenWidth < 380;  // you can adjust value later
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: DataTable(
-                      headingRowColor: MaterialStateProperty.all(
+                      headingRowColor: WidgetStateProperty.all(
                         Colors.grey[200],
                       ),
                       columnSpacing: 20,
