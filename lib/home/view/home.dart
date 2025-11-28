@@ -255,9 +255,17 @@ class _TestView1State extends State<TestView1> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: 50),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('test'),
+                  Text('test'),
+                ],
+              ),
+              
+              SizedBox(height: 20),
               // keep small dropdown (unchanged)
-             
 
               // Card containing responsive rows
               Card(
@@ -278,13 +286,31 @@ class _TestView1State extends State<TestView1> {
                             children: [
                               Expanded(flex: 5, child: Text("Item")),
                               SizedBox(width: 8),
-                              Expanded(flex: 2, child: Text("Qty", textAlign: TextAlign.center)),
+                              Expanded(
+                                flex: 2,
+                                child: Text("Qty", textAlign: TextAlign.center),
+                              ),
                               SizedBox(width: 8),
-                              Expanded(flex: 2, child: Text("Price", textAlign: TextAlign.center)),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  "Price",
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                               SizedBox(width: 8),
-                              Expanded(flex: 2, child: Text("Total", textAlign: TextAlign.center)),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  "Total",
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
                               SizedBox(width: 8),
-                              SizedBox(width: 40, child: Text("", textAlign: TextAlign.center)),
+                              SizedBox(
+                                width: 40,
+                                child: Text("", textAlign: TextAlign.center),
+                              ),
                             ],
                           ),
                         ),
@@ -300,10 +326,14 @@ class _TestView1State extends State<TestView1> {
 
                         // ensure keys lists are in sync
                         if (productDropdownKeys.length <= index) {
-                          productDropdownKeys.add(GlobalKey<DropdownSearchState<Product>>());
+                          productDropdownKeys.add(
+                            GlobalKey<DropdownSearchState<Product>>(),
+                          );
                         }
                         if (qtyDropdownKeys.length <= index) {
-                          qtyDropdownKeys.add(GlobalKey<DropdownSearchState<int>>());
+                          qtyDropdownKeys.add(
+                            GlobalKey<DropdownSearchState<int>>(),
+                          );
                         }
 
                         if (isSmall) {
@@ -333,19 +363,32 @@ class _TestView1State extends State<TestView1> {
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(fontSize: 14),
                                         ),
-                                        dropdownDecoratorProps: DropDownDecoratorProps(
-                                          dropdownSearchDecoration: InputDecoration(
-                                            border: OutlineInputBorder(),
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                                          ),
-                                        ),
+                                        dropdownDecoratorProps:
+                                            DropDownDecoratorProps(
+                                              dropdownSearchDecoration:
+                                                  InputDecoration(
+                                                    border:
+                                                        OutlineInputBorder(),
+                                                    contentPadding:
+                                                        EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                        ),
+                                                  ),
+                                            ),
                                         popupProps: PopupProps.menu(
                                           showSearchBox: true,
-                                          emptyBuilder: (context, searchEntry) => Center(child: Text("Loading products...")),
+                                          emptyBuilder:
+                                              (context, searchEntry) => Center(
+                                                child: Text(
+                                                  "Loading products...",
+                                                ),
+                                              ),
                                           searchFieldProps: TextFieldProps(
                                             focusNode: searchFocusNode,
                                             autofocus: true,
-                                            decoration: InputDecoration(hintText: "Search..."),
+                                            decoration: InputDecoration(
+                                              hintText: "Search...",
+                                            ),
                                             style: TextStyle(fontSize: 14),
                                           ),
                                         ),
@@ -361,14 +404,21 @@ class _TestView1State extends State<TestView1> {
                                             }
 
                                             // focus qty
-                                            FocusScope.of(context).requestFocus(qtyFocusNode);
+                                            FocusScope.of(
+                                              context,
+                                            ).requestFocus(qtyFocusNode);
 
                                             // try to open qty dropdown for this row
-                                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                                              if (qtyDropdownKeys[index].currentState != null) {
-                                                qtyDropdownKeys[index].currentState!.openDropDownSearch();
-                                              }
-                                            });
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                                  if (qtyDropdownKeys[index]
+                                                          .currentState !=
+                                                      null) {
+                                                    qtyDropdownKeys[index]
+                                                        .currentState!
+                                                        .openDropDownSearch();
+                                                  }
+                                                });
 
                                             // add new row if last
                                             if (row == rows.last) {
@@ -393,18 +443,21 @@ class _TestView1State extends State<TestView1> {
                                           searchFieldProps: TextFieldProps(
                                             keyboardType: TextInputType.number,
                                             focusNode: qtyFocusNode,
-                                            autofocus: false,
-                                            decoration: InputDecoration(hintText: "Qty"),
+                                            autofocus: true,
+                                            decoration: InputDecoration(
+                                              hintText: "Qty",
+                                            ),
                                             style: TextStyle(fontSize: 14),
                                           ),
                                         ),
-                                        dropdownBuilder: (context, selectedQty) {
-                                          return Text(
-                                            "${selectedQty ?? ''}",
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(fontSize: 14),
-                                          );
-                                        },
+                                        dropdownBuilder:
+                                            (context, selectedQty) {
+                                              return Text(
+                                                "${selectedQty ?? ''}",
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(fontSize: 14),
+                                              );
+                                            },
                                         onChanged: (v) {
                                           setState(() {
                                             if (v != null) row.qty = v;
@@ -418,7 +471,8 @@ class _TestView1State extends State<TestView1> {
                                 SizedBox(height: 10),
 
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     // Price
                                     Expanded(
@@ -445,14 +499,22 @@ class _TestView1State extends State<TestView1> {
 
                                     // Delete
                                     IconButton(
-                                      icon: Icon(Icons.delete, color: Colors.red),
+                                      icon: Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
                                       onPressed: () {
                                         setState(() {
                                           if (rows.length > 1) {
                                             rows.removeAt(index);
                                             // keep keys in sync
-                                            if (productDropdownKeys.length > index) productDropdownKeys.removeAt(index);
-                                            if (qtyDropdownKeys.length > index) qtyDropdownKeys.removeAt(index);
+                                            if (productDropdownKeys.length >
+                                                index)
+                                              productDropdownKeys.removeAt(
+                                                index,
+                                              );
+                                            if (qtyDropdownKeys.length > index)
+                                              qtyDropdownKeys.removeAt(index);
                                           }
                                         });
                                       },
@@ -481,19 +543,29 @@ class _TestView1State extends State<TestView1> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(fontSize: 14),
                                     ),
-                                    dropdownDecoratorProps: DropDownDecoratorProps(
-                                      dropdownSearchDecoration: InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                                      ),
-                                    ),
+                                    dropdownDecoratorProps:
+                                        DropDownDecoratorProps(
+                                          dropdownSearchDecoration:
+                                              InputDecoration(
+                                                border: OutlineInputBorder(),
+                                                contentPadding:
+                                                    EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                    ),
+                                              ),
+                                        ),
                                     popupProps: PopupProps.menu(
                                       showSearchBox: true,
-                                      emptyBuilder: (context, searchEntry) => Center(child: Text("Loading products...")),
+                                      emptyBuilder: (context, searchEntry) =>
+                                          Center(
+                                            child: Text("Loading products..."),
+                                          ),
                                       searchFieldProps: TextFieldProps(
                                         focusNode: searchFocusNode,
                                         autofocus: true,
-                                        decoration: InputDecoration(hintText: "Search..."),
+                                        decoration: InputDecoration(
+                                          hintText: "Search...",
+                                        ),
                                         style: TextStyle(fontSize: 14),
                                       ),
                                     ),
@@ -509,13 +581,20 @@ class _TestView1State extends State<TestView1> {
                                         }
 
                                         // focus qty
-                                        FocusScope.of(context).requestFocus(qtyFocusNode);
+                                        FocusScope.of(
+                                          context,
+                                        ).requestFocus(qtyFocusNode);
 
-                                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                                          if (qtyDropdownKeys[index].currentState != null) {
-                                            qtyDropdownKeys[index].currentState!.openDropDownSearch();
-                                          }
-                                        });
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                              if (qtyDropdownKeys[index]
+                                                      .currentState !=
+                                                  null) {
+                                                qtyDropdownKeys[index]
+                                                    .currentState!
+                                                    .openDropDownSearch();
+                                              }
+                                            });
 
                                         if (row == rows.last) {
                                           _addEmptyRow();
@@ -539,7 +618,9 @@ class _TestView1State extends State<TestView1> {
                                         keyboardType: TextInputType.number,
                                         focusNode: qtyFocusNode,
                                         autofocus: false,
-                                        decoration: InputDecoration(hintText: "Qty"),
+                                        decoration: InputDecoration(
+                                          hintText: "Qty",
+                                        ),
                                         style: TextStyle(fontSize: 14),
                                       ),
                                     ),
@@ -575,7 +656,10 @@ class _TestView1State extends State<TestView1> {
                                   child: Text(
                                     "₱${calculateTotal(row)}",
                                     textAlign: TextAlign.center,
-                                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red,
+                                    ),
                                   ),
                                 ),
 
@@ -589,8 +673,11 @@ class _TestView1State extends State<TestView1> {
                                       setState(() {
                                         if (rows.length > 1) {
                                           rows.removeAt(index);
-                                          if (productDropdownKeys.length > index) productDropdownKeys.removeAt(index);
-                                          if (qtyDropdownKeys.length > index) qtyDropdownKeys.removeAt(index);
+                                          if (productDropdownKeys.length >
+                                              index)
+                                            productDropdownKeys.removeAt(index);
+                                          if (qtyDropdownKeys.length > index)
+                                            qtyDropdownKeys.removeAt(index);
                                         }
                                       });
                                     },

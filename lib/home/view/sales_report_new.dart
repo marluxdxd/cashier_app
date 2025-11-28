@@ -26,6 +26,27 @@ class _SalesReportViewState extends State<SalesReportView> {
   DateTime? startDate;
   DateTime? endDate;
 
+    @override
+  void initState() {
+    super.initState();
+    checkSalesData(); // ✅ call your test function here
+  }
+
+  // Test function to see if sales data exists
+  Future<void> checkSalesData() async {
+    final db = await AppDB.instance.database;
+    final result = await db.query('sales');
+    
+    if (result.isEmpty) {
+      print("No sales data yet.");
+    } else {
+      print("Sales data found:");
+      for (var row in result) {
+        print(row); // Each row contains 'productName', 'qty', 'price', 'total', 'date'
+      }
+    }
+  }
+
   int get totalRevenue => results.fold(0, (sum, s) => sum + s.total);
 
   // Load sales within selected date range
@@ -83,50 +104,71 @@ class _SalesReportViewState extends State<SalesReportView> {
           content.add(pw.Divider());
           content.add(pw.SizedBox(height: 10));
 
-          salesByDate.entries.forEach((entry) {
-            final date = entry.key;
-            final sales = entry.value;
+         salesByDate.entries.forEach((entry) {
+  final date = entry.key;
+  final sales = entry.value;
 
-            content.add(
-              pw.Text(
-                DateFormat('MMM d, yyyy').format(DateTime.parse(date)),
-                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-              ),
-            );
+  content.add(
+    pw.Text(
+      DateFormat('MMM d, yyyy').format(DateTime.parse(date)),
+      style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+    ),
+  );
 
-            content.add(pw.SizedBox(height: 5));
+  content.add(pw.SizedBox(height: 5));
 
-            // Table header
-            content.add(
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Expanded(child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                  pw.SizedBox(width: 40),
-                  pw.Expanded(child: pw.Text('Qty', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                  pw.SizedBox(width: 60),
-                  pw.Text('Price', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
-            );
+  // Table header
+  content.add(
+    pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+      children: [
+        pw.Expanded(
+            child: pw.Text('Item',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+        pw.SizedBox(width: 40),
+        pw.Expanded(
+            child: pw.Text('Qty',
+                style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+        pw.SizedBox(width: 60),
+        pw.Text('Price',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+      ],
+    ),
+  );
 
-            sales.forEach((s) {
-              content.add(
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Expanded(child: pw.Text(s.productName)),
-                    pw.SizedBox(width: 40),
-                    pw.Expanded(child: pw.Text('${s.qty} pcs')),
-                    pw.SizedBox(width: 60),
-                    pw.Text('₱${s.total}'),
-                  ],
-                ),
-              );
-            });
+  // Row items
+  sales.forEach((s) {
+    content.add(
+      pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Expanded(child: pw.Text(s.productName)),
+          pw.SizedBox(width: 40),
+          pw.Expanded(child: pw.Text('${s.qty} pcs')),
+          pw.SizedBox(width: 60),
+          pw.Text('₱${s.total}'),
+        ],
+      ),
+    );
+  });
 
-            content.add(pw.Divider());
-          });
+  // ⭐ Add daily subtotal here
+  final dailyTotal = sales.fold(0, (sum, s) => sum + s.total);
+
+  content.add(pw.SizedBox(height: 5));
+  content.add(
+    pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Text(
+        "Subtotal: ₱$dailyTotal",
+        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+      ),
+    ),
+  );
+
+  content.add(pw.Divider());
+});
+
 
           content.add(pw.SizedBox(height: 10));
           content.add(
