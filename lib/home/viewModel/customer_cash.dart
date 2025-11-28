@@ -23,7 +23,7 @@ class CustomerCashField extends StatelessWidget {
     return TextField(
       controller: controller,
       focusNode: focusNode,               // NEW
-      autofocus: false,                    // NEW
+      autofocus: true,                    // NEW
       keyboardType: TextInputType.number,
       decoration: InputDecoration(
         labelText: "Customer Cash",

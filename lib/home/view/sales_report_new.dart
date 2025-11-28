@@ -26,7 +26,7 @@ class _SalesReportViewState extends State<SalesReportView> {
   DateTime? startDate;
   DateTime? endDate;
 
-    @override
+  @override
   void initState() {
     super.initState();
     checkSalesData(); // ✅ call your test function here
@@ -36,7 +36,7 @@ class _SalesReportViewState extends State<SalesReportView> {
   Future<void> checkSalesData() async {
     final db = await AppDB.instance.database;
     final result = await db.query('sales');
-    
+
     if (result.isEmpty) {
       print("No sales data yet.");
     } else {
@@ -44,6 +44,40 @@ class _SalesReportViewState extends State<SalesReportView> {
       for (var row in result) {
         print(row); // Each row contains 'productName', 'qty', 'price', 'total', 'date'
       }
+    }
+  }
+
+  Future<int> deleteSale(int id) async {
+    final db = await AppDB.instance.database;
+    return await db.delete(
+      'sales',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> deleteTransaction(Sale sale) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Transaction"),
+        content: const Text("Are you sure you want to delete this transaction?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await AppDB.instance.deleteSale(sale.id!);
+      await loadSalesByRange(); // Refresh UI
     }
   }
 
@@ -104,71 +138,70 @@ class _SalesReportViewState extends State<SalesReportView> {
           content.add(pw.Divider());
           content.add(pw.SizedBox(height: 10));
 
-         salesByDate.entries.forEach((entry) {
-  final date = entry.key;
-  final sales = entry.value;
+          salesByDate.entries.forEach((entry) {
+            final date = entry.key;
+            final sales = entry.value;
 
-  content.add(
-    pw.Text(
-      DateFormat('MMM d, yyyy').format(DateTime.parse(date)),
-      style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
-    ),
-  );
+            content.add(
+              pw.Text(
+                DateFormat('MMM d, yyyy').format(DateTime.parse(date)),
+                style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+              ),
+            );
 
-  content.add(pw.SizedBox(height: 5));
+            content.add(pw.SizedBox(height: 5));
 
-  // Table header
-  content.add(
-    pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [
-        pw.Expanded(
-            child: pw.Text('Item',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-        pw.SizedBox(width: 40),
-        pw.Expanded(
-            child: pw.Text('Qty',
-                style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-        pw.SizedBox(width: 60),
-        pw.Text('Price',
-            style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-      ],
-    ),
-  );
+            // Table header
+            content.add(
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Expanded(
+                      child: pw.Text('Item',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                  pw.SizedBox(width: 40),
+                  pw.Expanded(
+                      child: pw.Text('Qty',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                  pw.SizedBox(width: 60),
+                  pw.Text('Price',
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ],
+              ),
+            );
 
-  // Row items
-  sales.forEach((s) {
-    content.add(
-      pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Expanded(child: pw.Text(s.productName)),
-          pw.SizedBox(width: 40),
-          pw.Expanded(child: pw.Text('${s.qty} pcs')),
-          pw.SizedBox(width: 60),
-          pw.Text('₱${s.total}'),
-        ],
-      ),
-    );
-  });
+            // Row items
+            sales.forEach((s) {
+              content.add(
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Expanded(child: pw.Text(s.productName)),
+                    pw.SizedBox(width: 40),
+                    pw.Expanded(child: pw.Text('${s.qty} pcs')),
+                    pw.SizedBox(width: 60),
+                    pw.Text('₱${s.total}'),
+                  ],
+                ),
+              );
+            });
 
-  // ⭐ Add daily subtotal here
-  final dailyTotal = sales.fold(0, (sum, s) => sum + s.total);
+            // Daily subtotal
+            final dailyTotal = sales.fold(0, (sum, s) => sum + s.total);
 
-  content.add(pw.SizedBox(height: 5));
-  content.add(
-    pw.Align(
-      alignment: pw.Alignment.centerRight,
-      child: pw.Text(
-        "Subtotal: ₱$dailyTotal",
-        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
-      ),
-    ),
-  );
+            content.add(pw.SizedBox(height: 5));
+            content.add(
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Text(
+                  "Subtotal: ₱$dailyTotal",
+                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                ),
+              ),
+            );
 
-  content.add(pw.Divider());
-});
-
+            content.add(pw.Divider());
+          });
 
           content.add(pw.SizedBox(height: 10));
           content.add(
@@ -294,6 +327,8 @@ class _SalesReportViewState extends State<SalesReportView> {
                           final date = entry.key;
                           final sales = entry.value;
 
+                          final dailyTotal = sales.fold(0, (sum, s) => sum + s.total);
+
                           return Card(
                             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             child: Padding(
@@ -310,10 +345,11 @@ class _SalesReportViewState extends State<SalesReportView> {
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: const [
                                       Expanded(child: Text("Item", style: TextStyle(fontWeight: FontWeight.bold))),
-                                      SizedBox(width: 30),
+                                      SizedBox(width: 10),
                                       Expanded(child: Text("Qty", style: TextStyle(fontWeight: FontWeight.bold))),
-                                      SizedBox(width: 60),
+                                      SizedBox(width: 30),
                                       Text("Price", style: TextStyle(fontWeight: FontWeight.bold)),
+                                      SizedBox(width: 45),
                                     ],
                                   ),
                                   ...sales.map((s) => Row(
@@ -324,8 +360,21 @@ class _SalesReportViewState extends State<SalesReportView> {
                                           Expanded(child: Text("${s.qty} pcs")),
                                           const SizedBox(width: 60),
                                           Text("₱${s.total}"),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete, color: Colors.red),
+                                            onPressed: () => deleteTransaction(s),
+                                          ),
                                         ],
                                       )),
+                                  const SizedBox(height: 5),
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      "Subtotal: ₱$dailyTotal",
+                                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  const Divider(),
                                 ],
                               ),
                             ),

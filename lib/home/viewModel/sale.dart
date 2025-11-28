@@ -3,6 +3,7 @@ class Sale {
   String productName;
   int qty;
   int price;
+  int promoDiscount;    // ⭐ ADD THIS
   int total;
   
   String date;
@@ -13,6 +14,7 @@ class Sale {
     required this.qty,
     required this.price,
     required this.total,
+    this.promoDiscount = 0,   // ⭐ DEFAULT VALUE
     required this.date,
   });
 
@@ -24,6 +26,8 @@ class Sale {
       'qty': qty,
       'price': price,
       'total': total,
+      'promoDiscount': promoDiscount,   // ⭐ ADD THIS
+      
       'date': date,
     };
   }
@@ -36,6 +40,7 @@ class Sale {
       qty: map['qty'] as int,
       price: map['price'] as int,
       total: map['total'] as int,
+      promoDiscount: map['promoDiscount'] ?? 0,   // ⭐ READ THIS
       date: map['date'] as String,
     );
   }

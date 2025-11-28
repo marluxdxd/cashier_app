@@ -234,8 +234,9 @@ class _TestView1State extends State<TestView1> {
               );
             },
           ),
+
           IconButton(
-            icon: Icon(Icons.search, color: Colors.black),
+            icon: Icon(Icons.search, color: Colors.black, size: 30),
             onPressed: () {
               showDialog(
                 context: context,
@@ -244,6 +245,8 @@ class _TestView1State extends State<TestView1> {
               );
             },
           ),
+
+          SizedBox(width: 20),
         ],
       ),
       drawer: AppDrawer(onProductAdded: () async => await loadProducts()),
@@ -255,15 +258,8 @@ class _TestView1State extends State<TestView1> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+       
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('test'),
-                  Text('test'),
-                ],
-              ),
-              
               SizedBox(height: 20),
               // keep small dropdown (unchanged)
 

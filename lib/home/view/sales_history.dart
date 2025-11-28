@@ -34,14 +34,38 @@ class _SalesHistoryViewState extends State<SalesHistoryView> {
         title: Text("Sales History"),
          actions: [
           IconButton(
-            icon: Icon(Icons.delete_forever),
-            onPressed: () async {
-              await SaleService().clearAllSales();
-              setState(() {
-                sales.clear();
-              });
-            },
+  icon: Icon(Icons.delete_forever),
+  onPressed: () async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Confirm Delete"),
+        content: Text("Are you sure you want to delete all sales?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("No"),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              "Yes",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await SaleService().clearAllSales();
+      setState(() {
+        sales.clear();
+      });
+    }
+  },
+),
+
         ],
       ),
       body: loading

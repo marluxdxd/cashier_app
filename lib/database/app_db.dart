@@ -157,6 +157,17 @@ Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     );
   }
 
+  // DELETE a sale transaction
+Future<int> deleteSale(int id) async {
+  final db = await instance.database;
+  return await db.delete(
+    'sales',
+    where: 'id = ?',
+    whereArgs: [id],
+  );
+}
+
+
   Future<void> seedDefaultProducts() async {}
 
 
