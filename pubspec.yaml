@@ -49,6 +49,9 @@ dependencies:
   pdf: ^3.10.3
   printing: ^5.11.0
   open_file: ^3.5.10
+  supabase_flutter: ^2.10.3
+  http: ^1.6.0
+  connectivity_plus: ^7.0.0
 
 
 
