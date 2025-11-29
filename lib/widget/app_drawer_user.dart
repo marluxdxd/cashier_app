@@ -1,3 +1,4 @@
+import 'package:cashier_app/database/app_db.dart';
 import 'package:cashier_app/home/view/home.dart';
 import 'package:cashier_app/home/view/home_user.dart';
 import 'package:cashier_app/home/view/product_add.dart';
@@ -8,14 +9,14 @@ import 'package:cashier_app/home/view/sales_report_new.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/database/database_backup.dart';
 
-class AppDrawer extends StatefulWidget {
+class AppDrawerUser extends StatefulWidget {
   final Future<void> Function()? onProductAdded;
-  const AppDrawer({super.key, this.onProductAdded});
+  const AppDrawerUser({super.key, this.onProductAdded});
   @override
-  State<AppDrawer> createState() => _AppDrawerState();
+  State<AppDrawerUser> createState() => _AppDrawerUserState();
 }
 
-class _AppDrawerState extends State<AppDrawer> {
+class _AppDrawerUserState extends State<AppDrawerUser> {
   // <-- add this
   Future<bool> showPasswordDialog(BuildContext context) async {
     TextEditingController passwordController = TextEditingController();
@@ -28,7 +29,7 @@ class _AppDrawerState extends State<AppDrawer> {
         content: TextField(
           controller: passwordController,
           obscureText: true,
-          decoration: InputDecoration(hintText: 'Enter password'),
+          decoration: InputDecoration(hintText: 'Enter admin password'),
         ),
         actions: [
           TextButton(
@@ -38,13 +39,19 @@ class _AppDrawerState extends State<AppDrawer> {
             child: Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              if (passwordController.text == 'admin123') {
-                // ✅ correct password
+            onPressed: () async {
+              // 🔥 CHECK IN DATABASE
+              final result = await AppDB.instance.login(
+                "admin", // username
+                passwordController.text,
+              );
+
+              if (result != null && result["role"] == "admin") {
+                // correct admin
                 isCorrect = true;
                 Navigator.of(context).pop();
               } else {
-                // ❌ wrong password
+                // wrong password
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text('Wrong password!')));
@@ -93,6 +100,7 @@ class _AppDrawerState extends State<AppDrawer> {
                               },
                               child: Text('User'),
                             ),
+
                             SimpleDialogOption(
                               onPressed: () async {
                                 bool allowed = await showPasswordDialog(
@@ -137,74 +145,6 @@ class _AppDrawerState extends State<AppDrawer> {
               Navigator.pop(context);
             },
           ),
-          ListTile(
-            leading: Icon(Icons.inventory_rounded),
-            title: Text("Add Products"),
-            onTap: () {
-              Navigator.pop(context);
-
-              showDialog(
-                context: context,
-                builder: (context) => AddProduct(
-                  onProductAdded: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Product added successfully!")),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-
-          ListTile(
-            leading: Icon(Icons.list_alt),
-            title: Text("View all products"),
-            onTap: () {
-              Navigator.pop(context);
-              showDialog(
-                barrierColor: Colors.black.withOpacity(0.2),
-                context: context,
-                builder: (context) => ProductListView(),
-              );
-            },
-          ),
-
-          ListTile(
-            leading: Icon(Icons.storefront_sharp),
-            title: Text("Stock"),
-            onTap: () {
-              Navigator.pop(context);
-              showDialog(
-                barrierColor: Colors.black.withOpacity(0.2),
-                context: context,
-                builder: (context) => ProductStock(),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.history),
-            title: Text("Sales History"),
-            onTap: () {
-              Navigator.pop(context);
-              showDialog(
-                barrierColor: Colors.black.withOpacity(0.2),
-                context: context,
-                builder: (context) => SalesHistoryView(),
-              );
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.campaign),
-            title: Text("Sales Report"),
-            onTap: () {
-              Navigator.pop(context);
-              showDialog(
-                barrierColor: Colors.black.withOpacity(0.2),
-                context: context,
-                builder: (context) => SalesReportView(),
-              );
-            },
-          ),
 
           ExpansionTile(
             leading: Icon(Icons.storage),
@@ -223,24 +163,6 @@ class _AppDrawerState extends State<AppDrawer> {
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Backup failed: $e")),
-                    );
-                  }
-                },
-              ),
-
-              // Restore Database
-              ListTile(
-                leading: Icon(Icons.restore),
-                title: Text("Restore Database"),
-                onTap: () async {
-                  try {
-                    await DatabaseBackup.restoreDatabase();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Database restored!")),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Restore failed: $e")),
                     );
                   }
                 },

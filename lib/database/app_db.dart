@@ -3,7 +3,6 @@ import 'package:cashier_app/home/viewModel/sale.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
-
 class AppDB {
   static final AppDB instance = AppDB._init();
   static Database? _database;
@@ -22,7 +21,7 @@ class AppDB {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,   // 🔥 UPDATED VERSION
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -38,7 +37,6 @@ class AppDB {
         qty INTEGER DEFAULT 0,
         otherqty INTEGER DEFAULT 0,
         promo INTEGER DEFAULT 0
-        
       )
     ''');
 
@@ -53,48 +51,86 @@ class AppDB {
         date TEXT
       )
     ''');
+
+    // 🔥 NEW USERS TABLE
+    await db.execute('''
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT,
+        role TEXT
+      )
+    ''');
+
+    // 🔥 DEFAULT ADMIN USER
+    await db.insert('users', {
+      'username': 'admin',
+      'password': 'admin123',
+      'role': 'admin'
+    });
   }
 
   // Auto-upgrade if tables do not exist
-Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-  // Upgrade to version 3 logic (keep your old upgrade if needed)
-  if (oldVersion < 3) {
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        price INTEGER,
-        qty INTEGER DEFAULT 0
-      )
-    ''');
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          price INTEGER,
+          qty INTEGER DEFAULT 0
+        )
+      ''');
 
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS sales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        productName TEXT,
-        qty INTEGER,
-        price INTEGER,
-        total INTEGER,
-        date TEXT
-      )
-    ''');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS sales (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          productName TEXT,
+          qty INTEGER,
+          price INTEGER,
+          total INTEGER,
+          date TEXT
+        )
+      ''');
+    }
+
+    if (oldVersion < 4) {
+      await db.execute('''
+        ALTER TABLE products ADD COLUMN otherqty INTEGER DEFAULT 0
+      ''');
+    }
+
+    if (oldVersion < 5) {
+      await db.execute('''
+        ALTER TABLE products ADD COLUMN promo INTEGER DEFAULT 0
+      ''');
+    }
+
+    // 🔥 VERSION 6 → Add users table
+    if (oldVersion < 6) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          username TEXT UNIQUE,
+          password TEXT,
+          role TEXT
+        )
+      ''');
+
+      // Insert default admin if table empty
+      final count = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM users')
+      );
+
+      if (count == 0) {
+        await db.insert('users', {
+          'username': 'admin',
+          'password': 'admin123',
+          'role': 'admin'
+        });
+      }
+    }
   }
-
-  // Upgrade to version 4: add new column 'otherqty'
-  if (oldVersion < 4) {
-    await db.execute('''
-      ALTER TABLE products ADD COLUMN otherqty INTEGER DEFAULT 0
-    ''');
-  }
-
-   // Upgrade to version 5: add promo column
-  if (oldVersion < 5) {
-    await db.execute('''
-      ALTER TABLE products ADD COLUMN promo INTEGER DEFAULT 0
-    ''');
-  }
-}
-
 
   Future close() async {
     final db = await instance.database;
@@ -109,7 +145,7 @@ Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
       'price': product.price.toInt(),
       'qty': product.qty,
       'otherqty': product.otherqty,
-      'promo': product.promo ? 1 : 0, // NEW
+      'promo': product.promo ? 1 : 0,
     });
   }
 
@@ -125,12 +161,10 @@ Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
         price: (row['price'] as int).toDouble(),
         qty: row['qty'] as int,
         otherqty: row['otherqty'] as int,
-        promo: (row['promo'] as int? ?? 0) == 1, // NEW
+        promo: (row['promo'] as int? ?? 0) == 1,
       );
     }).toList();
   }
-
-  
 
   // Update product
   Future<void> updateProduct(Product product) async {
@@ -158,23 +192,20 @@ Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
   }
 
   // DELETE a sale transaction
-Future<int> deleteSale(int id) async {
-  final db = await instance.database;
-  return await db.delete(
-    'sales',
-    where: 'id = ?',
-    whereArgs: [id],
-  );
-}
-
+  Future<int> deleteSale(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'sales',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 
   Future<void> seedDefaultProducts() async {}
 
-
-
-Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end) async {
+  Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end) async {
     final db = await AppDB.instance.database;
-    
+
     final result = await db.query(
       'sales',
       where: 'date BETWEEN ? AND ?',
@@ -185,8 +216,45 @@ Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end) async {
     return result.map((row) => Sale.fromMap(row)).toList();
   }
 
-  // ... other SaleService methods
+  // -----------------------------------------------------------
+  // 🔥 NEW USER FUNCTIONS BELOW
+  // -----------------------------------------------------------
 
+  Future<int> insertUser(String username, String password, String role) async {
+    final db = await instance.database;
+    return await db.insert('users', {
+      'username': username,
+      'password': password,
+      'role': role
+    });
+  }
 
+  Future<Map<String, dynamic>?> login(String username, String password) async {
+    final db = await instance.database;
 
+    final result = await db.query(
+      'users',
+      where: 'username = ? AND password = ?',
+      whereArgs: [username, password],
+    );
+
+    if (result.isNotEmpty) return result.first;
+    return null;
+  }
+
+  Future<String?> getUserRole(String username) async {
+    final db = await instance.database;
+
+    final result = await db.query(
+      'users',
+      where: 'username = ?',
+      whereArgs: [username],
+    );
+
+    if (result.isNotEmpty) {
+      return result.first['role'] as String;
+    }
+
+    return null;
+  }
 }
