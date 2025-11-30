@@ -5,9 +5,8 @@ class Sale {
   int price;
   int promoDiscount;    // ⭐ ADD THIS
   int total;
-  
   String date;
-
+  
   Sale({
     this.id,
     required this.productName,

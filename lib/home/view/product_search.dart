@@ -1,3 +1,4 @@
+import 'package:cashier_app/home/viewModel/product_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/database/app_db.dart'; // Import AppDB for fetching products
 import 'package:cashier_app/home/viewModel/product.dart'; // Import the Product class
@@ -42,55 +43,63 @@ class _SearchProductState extends State<SearchProduct> {
   }
 
   // Edit product function
-  void editProduct(Product product) {
-    TextEditingController nameController = TextEditingController(
-      text: product.name,
-    );
-    TextEditingController priceController = TextEditingController(
-      text: product.price.toString(),
-    );
+void editProduct(Product product) {
+  final nameController = TextEditingController(text: product.name);
+  final priceController = TextEditingController(text: product.price.toString());
 
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Edit Product"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: "Product Name"),
-              ),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: "Product Price"),
-              ),
-            ],
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text("Edit Product"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: nameController,
+            decoration: InputDecoration(labelText: "Product Name"),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  product.name = nameController.text;
-                  product.price =
-                      double.tryParse(priceController.text) ?? product.price;
-                });
-                AppDB.instance.updateProduct(product); // Update product in DB
-                Navigator.pop(context);
-              },
-              child: Text("Save"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
-            ),
-          ],
-        );
-      },
-    );
-  }
+          TextField(
+            controller: priceController,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(labelText: "Product Price"),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () async {
+            // ✅ Update product object
+            product.name = nameController.text;
+            product.price = double.tryParse(priceController.text) ?? product.price;
+
+            // ✅ Sync local + Supabase
+            await ProductService().updateProductBoth(product);
+
+            // ✅ Update in-memory lists
+            final index = products.indexWhere((p) => p.id == product.id);
+            if (index != -1) products[index] = product;
+
+            final fIndex = filteredProducts.indexWhere((p) => p.id == product.id);
+            if (fIndex != -1) filteredProducts[fIndex] = product;
+
+            // ✅ Refresh UI
+            if (mounted) setState(() {});
+
+            Navigator.pop(context); // Close dialog
+          },
+          child: Text("Save"),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text("Cancel"),
+        ),
+      ],
+    ),
+  );
+}
+
+
+
 
   // Show confirmation dialog before deleting the product
   void confirmDeleteProduct(Product product) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/database/app_db.dart';
+import 'package:cashier_app/home/viewModel/product_service.dart';
 
 class AddProduct extends StatefulWidget {
   final VoidCallback? onProductAdded;
@@ -119,32 +120,6 @@ Column(
               'Note: if you check promo will be activate(leave a blank if none)',
               style: TextStyle(fontSize: 10, color: Colors.grey),
             ),
-          
-                      // ElevatedButton(
-                      //   onPressed: () async {
-                      //     // 1️⃣ Get user input safely
-                      //     int step =
-                      //         int.tryParse(qty1Controller.text) ??
-                      //         2; // default 1
-                      //     if (step <= 0) step = 2; // prevent infinite loop
-
-                      //     // 2️⃣ Fetch products from DB
-                      //     final products = await AppDB.instance.fetchProducts();
-
-                      //     // 3️⃣ Loop through products and calculate multiples
-                      //     for (var p in products) {
-                      //       if (p.promo) {
-                      //         print("Calculated multiples for ${p.name}:");
-                      //         for (int i = step; i <= 20; i += step) {
-                      //           print(
-                      //             "${p.name} | ${p.qty} | ${p.otherqty} | ${p.price} | ${p.promo} | ${i}",
-                      //           );
-                      //         }
-                      //       }
-                      //     }
-                      //   },
-                      //   child: Text("Debug Console"),
-                      // ),
                     ],
                   ),
                 ),

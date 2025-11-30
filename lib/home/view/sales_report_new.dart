@@ -1,3 +1,4 @@
+import 'package:cashier_app/services/sync/sync_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/database/app_db.dart';
 import 'package:cashier_app/home/viewModel/sale.dart';
@@ -76,7 +77,7 @@ class _SalesReportViewState extends State<SalesReportView> {
     );
 
     if (confirm == true) {
-      await AppDB.instance.deleteSale(sale.id!);
+      await SyncService.instance.deleteSaleBoth(sale.id!);
       await loadSalesByRange(); // Refresh UI
     }
   }
@@ -84,23 +85,38 @@ class _SalesReportViewState extends State<SalesReportView> {
   int get totalRevenue => results.fold(0, (sum, s) => sum + s.total);
 
   // Load sales within selected date range
-  Future<void> loadSalesByRange() async {
-    if (startDate == null || endDate == null) return;
-
-    final start = DateTime(startDate!.year, startDate!.month, startDate!.day);
-    final end = DateTime(
-      endDate!.year,
-      endDate!.month,
-      endDate!.day,
-      23,
-      59,
-      59,
+  // Load sales within selected date range
+Future<void> loadSalesByRange() async {
+  if (startDate == null || endDate == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Please select both start and end dates.")),
     );
+    return;
+  }
 
-    setState(() => loading = true);
+  final start = DateTime(startDate!.year, startDate!.month, startDate!.day);
+  final end = DateTime(endDate!.year, endDate!.month, endDate!.day, 23, 59, 59);
+
+  setState(() => loading = true);
+
+  try {
+    // Fetch the sales data within the date range
     results = await AppDB.instance.getSalesByDateRange(start, end);
+
+    // Filter out sales with null dates (if any)
+    results = results.where((s) => s.date != null).toList();
+
+    // Refresh the UI
+    setState(() => loading = false);
+  } catch (e) {
+    // Handle any database errors
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error loading sales data: $e")),
+    );
     setState(() => loading = false);
   }
+}
+
 
   // Generate PDF and open it immediately
   Future<void> generateAndOpenPDF() async {

@@ -1,9 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../home/viewModel/sale.dart';
-import '../home/viewModel/product.dart';
-import '../database/app_db.dart';
+import '../../database/app_db.dart';
 import 'package:sqflite/sqflite.dart';
 
 class SyncService {
@@ -14,6 +13,45 @@ class SyncService {
   SyncService._init();
 
   final supabase = Supabase.instance.client;
+
+
+//Delete both sqflite and supabase
+  Future<void> deleteSaleBoth(int id) async {
+    final db = await AppDB.instance.database;
+
+    // 1️⃣ Delete locally
+    await db.delete(
+      'sales',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    // 2️⃣ Delete in Supabase
+    if (await _isOnline()) {
+      try {
+        await supabase.from('sales').delete().eq('id', id);
+        print("Deleted in Supabase");
+      } catch (e) {
+        print("Supabase delete failed: $e");
+      }
+    } else {
+      print("Offline → cannot delete from Supabase");
+    }
+  }
+
+  // 🔽 KEEP THIS — needed by deleteSaleBoth()
+  Future<bool> _isOnline() async {
+    try {
+      final result = await InternetAddress.lookup('google.com');
+      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+
+
+  
 
   // --------------------------
   // START AUTO-SYNC
@@ -62,7 +100,6 @@ class SyncService {
   // --------------------------
   // UPLOAD FROM LOCAL → CLOUD
   // --------------------------
-
   Future<void> syncProductsUpload() async {
     final db = await AppDB.instance.database;
     final rows = await db.query('products');
@@ -86,11 +123,11 @@ class SyncService {
     for (var row in rows) {
       await supabase.from('sales').upsert({
         'id': row['id'],
-        'productName': row['productName'],
+        'productname': row['productName'], // match Supabase
         'qty': row['qty'],
         'price': row['price'],
         'total': row['total'],
-        'promoDiscount': row['promoDiscount'],
+        'promodiscount': row['promoDiscount'],
         'date': row['date'],
       });
     }
@@ -113,7 +150,6 @@ class SyncService {
   // --------------------------
   // DOWNLOAD FROM CLOUD → LOCAL
   // --------------------------
-
   Future<void> syncProductsDownload() async {
     final db = await AppDB.instance.database;
 
@@ -139,11 +175,11 @@ class SyncService {
     for (var item in cloud) {
       await db.insert('sales', {
         'id': item['id'],
-        'productName': item['productName'],
+        'productname': item['productname'], // match local SQLite
         'qty': item['qty'],
         'price': item['price'],
         'total': item['total'],
-        'promoDiscount': item['promoDiscount'],
+        'promodiscount': item['promodiscount'],
         'date': item['date'],
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }

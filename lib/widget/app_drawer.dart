@@ -1,4 +1,4 @@
-import 'package:cashier_app/home/view/home.dart';
+import 'package:cashier_app/home/view/home_admin.dart';
 import 'package:cashier_app/home/view/home_user.dart';
 import 'package:cashier_app/home/view/product_add.dart';
 import 'package:cashier_app/home/view/product_list_view.dart';

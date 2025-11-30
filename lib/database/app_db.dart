@@ -1,7 +1,9 @@
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/home/viewModel/sale.dart';
+import 'package:cashier_app/services/sync/sync_service.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'dart:async';
 
 class AppDB {
   static final AppDB instance = AppDB._init();
@@ -21,14 +23,14 @@ class AppDB {
 
     return await openDatabase(
       path,
-      version: 6,   // 🔥 UPDATED VERSION
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
   }
 
-  // Create ALL required tables
   Future _createDB(Database db, int version) async {
+    // Create tables
     await db.execute('''
       CREATE TABLE products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,7 +54,6 @@ class AppDB {
       )
     ''');
 
-    // 🔥 NEW USERS TABLE
     await db.execute('''
       CREATE TABLE users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,15 +63,17 @@ class AppDB {
       )
     ''');
 
-    // 🔥 DEFAULT ADMIN USER
+    // Insert default admin user
     await db.insert('users', {
       'username': 'admin',
       'password': 'admin123',
       'role': 'admin'
     });
+
+    // Auto sync after create
+    SyncService.instance.syncAll();
   }
 
-  // Auto-upgrade if tables do not exist
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 3) {
       await db.execute('''
@@ -95,18 +98,13 @@ class AppDB {
     }
 
     if (oldVersion < 4) {
-      await db.execute('''
-        ALTER TABLE products ADD COLUMN otherqty INTEGER DEFAULT 0
-      ''');
+      await db.execute('ALTER TABLE products ADD COLUMN otherqty INTEGER DEFAULT 0');
     }
 
     if (oldVersion < 5) {
-      await db.execute('''
-        ALTER TABLE products ADD COLUMN promo INTEGER DEFAULT 0
-      ''');
+      await db.execute('ALTER TABLE products ADD COLUMN promo INTEGER DEFAULT 0');
     }
 
-    // 🔥 VERSION 6 → Add users table
     if (oldVersion < 6) {
       await db.execute('''
         CREATE TABLE IF NOT EXISTS users (
@@ -117,10 +115,7 @@ class AppDB {
         )
       ''');
 
-      // Insert default admin if table empty
-      final count = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM users')
-      );
+      final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM users'));
 
       if (count == 0) {
         await db.insert('users', {
@@ -130,6 +125,9 @@ class AppDB {
         });
       }
     }
+
+    // Auto sync on upgrade
+    SyncService.instance.syncAll();
   }
 
   Future close() async {
@@ -137,19 +135,24 @@ class AppDB {
     db.close();
   }
 
-  // Insert a product
+  // ----------------- CRUD METHODS -------------------
+
+  // Products
   Future<int> insertProduct(Product product) async {
     final db = await instance.database;
-    return await db.insert('products', {
+
+    final id = await db.insert('products', {
       'name': product.name,
       'price': product.price.toInt(),
       'qty': product.qty,
       'otherqty': product.otherqty,
       'promo': product.promo ? 1 : 0,
     });
+
+    SyncService.instance.syncAll();
+    return id;
   }
 
-  // Fetch all products
   Future<List<Product>> fetchProducts() async {
     final db = await instance.database;
     final result = await db.query('products');
@@ -166,45 +169,83 @@ class AppDB {
     }).toList();
   }
 
-  // Update product
   Future<void> updateProduct(Product product) async {
     final db = await instance.database;
+
     await db.update(
       'products',
       {
         'name': product.name,
         'price': product.price.toInt(),
         'qty': product.qty,
+        'otherqty': product.otherqty,
+        'promo': product.promo ? 1 : 0,
       },
       where: 'id = ?',
       whereArgs: [product.id],
     );
+
+    SyncService.instance.syncAll();
   }
 
-  // Delete product
+Future<void> seedDefaultProducts() async {
+  // No default products inserted
+  print("No default products seeded");
+}
+
+
   Future<void> deleteProduct(int productId) async {
     final db = await instance.database;
+
     await db.delete(
       'products',
       where: 'id = ?',
       whereArgs: [productId],
     );
+
+    SyncService.instance.syncAll();
   }
 
-  // DELETE a sale transaction
+  // Sales
+  Future<int> insertSale(Sale sale) async {
+    final db = await instance.database;
+
+    final id = await db.insert('sales', {
+      'productName': sale.productName,
+      'qty': sale.qty,
+      'price': sale.price,
+      'total': sale.total,
+      'promoDiscount': sale.promoDiscount ?? 0,
+      'date': sale.date,
+    });
+
+    SyncService.instance.syncAll();
+    return id;
+  }
+
+  Future<List<Sale>> fetchAllSales() async {
+    final db = await instance.database;
+    final result = await db.query('sales');
+
+    return result.map((row) => Sale.fromMap(row)).toList();
+  }
+
   Future<int> deleteSale(int id) async {
     final db = await instance.database;
-    return await db.delete(
+
+    final result = await db.delete(
       'sales',
       where: 'id = ?',
       whereArgs: [id],
     );
+
+    SyncService.instance.syncAll();
+    return result;
   }
 
-  Future<void> seedDefaultProducts() async {}
-
+  /// ✅ Get sales filtered by date range
   Future<List<Sale>> getSalesByDateRange(DateTime start, DateTime end) async {
-    final db = await AppDB.instance.database;
+    final db = await instance.database;
 
     final result = await db.query(
       'sales',
@@ -216,17 +257,18 @@ class AppDB {
     return result.map((row) => Sale.fromMap(row)).toList();
   }
 
-  // -----------------------------------------------------------
-  // 🔥 NEW USER FUNCTIONS BELOW
-  // -----------------------------------------------------------
-
+  // Users
   Future<int> insertUser(String username, String password, String role) async {
     final db = await instance.database;
-    return await db.insert('users', {
+
+    final id = await db.insert('users', {
       'username': username,
       'password': password,
       'role': role
     });
+
+    SyncService.instance.syncAll();
+    return id;
   }
 
   Future<Map<String, dynamic>?> login(String username, String password) async {
@@ -238,8 +280,7 @@ class AppDB {
       whereArgs: [username, password],
     );
 
-    if (result.isNotEmpty) return result.first;
-    return null;
+    return result.isNotEmpty ? result.first : null;
   }
 
   Future<String?> getUserRole(String username) async {
@@ -251,10 +292,6 @@ class AppDB {
       whereArgs: [username],
     );
 
-    if (result.isNotEmpty) {
-      return result.first['role'] as String;
-    }
-
-    return null;
+    return result.isNotEmpty ? result.first['role'] as String : null;
   }
 }
