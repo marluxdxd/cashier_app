@@ -1,15 +1,21 @@
 import 'package:cashier_app/database/app_db.dart';
+import 'package:cashier_app/home/viewModel/sync_status.dart';
 import 'package:cashier_app/widget/app_drawer_user.dart';
 import 'package:cashier_app/widget/notificationbell.dart';
 import 'package:cashier_app/home/view/product_notification.dart';
 import 'package:cashier_app/home/viewModel/sale_service.dart';
 import 'package:cashier_app/home/viewModel/customer_cash.dart';
+import 'package:cashier_app/home/view/product_search.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/home/viewModel/row.dart';
+import 'package:cashier_app/data/row_data.dart';
 import 'package:cashier_app/home/viewModel/sale.dart';
 import 'package:cashier_app/widget/app_drawer.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter/material.dart';
+import 'package:cashier_app/home/viewModel/sync_status.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class UserView extends StatefulWidget {
   const UserView({super.key});
@@ -20,12 +26,14 @@ class UserView extends StatefulWidget {
 
 class _UserViewState extends State<UserView> {
   String? selectedValue;
+final SaleService saleService = SaleService();
+
 
   // lists of keys for each row
   List<GlobalKey<DropdownSearchState<Product>>> productDropdownKeys = [];
   List<GlobalKey<DropdownSearchState<int>>> qtyDropdownKeys = [];
 
-  List<String> fruits = ['Apple', 'Banana', 'Cherry', 'Date']; //test
+  // List<String> fruits = ['Apple', 'Banana', 'Cherry', 'Date'];  TEST
 
   List<String> getLowStockItems() {
     return dbProducts
@@ -46,6 +54,8 @@ class _UserViewState extends State<UserView> {
   // local rows state (keeps behavior predictable)
   List<RowData> rows = [];
 
+
+
   @override
   void initState() {
     super.initState();
@@ -55,6 +65,7 @@ class _UserViewState extends State<UserView> {
     qtyDropdownKeys.add(GlobalKey<DropdownSearchState<int>>());
 
     loadProducts();
+    
   }
 
   Future<void> loadProducts() async {
@@ -63,14 +74,34 @@ class _UserViewState extends State<UserView> {
     setState(() {
       dbProducts = productsFromDB;
     });
+      //THIS IS FRESHOPEN IT AUTO DROPDOWNSEARCH ITEM(PRODUCT)
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (productDropdownKeys.isNotEmpty &&
+    //       dbProducts.isNotEmpty &&
+    //       productDropdownKeys[0].currentState != null) {
+    //     productDropdownKeys[0].currentState!.openDropDownSearch();
+    //   }
+    // });
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (productDropdownKeys.isNotEmpty &&
-          dbProducts.isNotEmpty &&
-          productDropdownKeys[0].currentState != null) {
-        productDropdownKeys[0].currentState!.openDropDownSearch();
-      }
-    });
+  Future<void> syncTransaction(int amount) async {
+    final syncStatus = Provider.of<SyncStatus>(context, listen: false);
+    syncStatus.startSync(); // 🔄 Start syncing
+
+    final supabase = Supabase.instance.client; // <-- put it here
+
+    try {
+      // Upload to Supabase
+      await supabase.from('transactions').insert({
+        'amount': amount,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      syncStatus.finishSync(success: true); // ✅ Success
+    } catch (e) {
+      syncStatus.finishSync(success: false); // 🟡 Pending / error
+      
+    }
   }
 
   Future<void> fullRefresh() async {
@@ -194,6 +225,7 @@ class _UserViewState extends State<UserView> {
         ),
       ),
     );
+     await syncTransaction(totalBill);
   }
 
   // helper to add a new row and matching keys
@@ -216,7 +248,7 @@ class _UserViewState extends State<UserView> {
         backgroundColor: Colors.white,
         elevation: 1,
         title: Text(
-          'Sari-Sari Store',
+          'Sari-Sari Stre',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -234,6 +266,8 @@ class _UserViewState extends State<UserView> {
             },
           ),
 
+    
+
           SizedBox(width: 20),
         ],
       ),
@@ -247,9 +281,82 @@ class _UserViewState extends State<UserView> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 20),
-              // keep small dropdown (unchanged)
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Builder(
+                  builder: (context) {
+                    return Consumer<SyncStatus>(
+                      builder: (context, sync, child) {
+                        Widget statusWidget;
 
-              // Card containing responsive rows
+                        if (sync.isSyncing) {
+                          // 🔄 Syncing animation
+                          statusWidget = Tooltip(
+                            key: ValueKey('syncing'),
+                            message: 'Syncing...',
+                            child: SizedBox(
+                              width: 28,
+                              height: 28,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          );
+                        } else if (!sync.isOnline) {
+                          // 🔴 Offline
+                          statusWidget = Tooltip(
+                            key: ValueKey('offline'),
+                            message: 'No connection',
+                            child: Icon(
+                              Icons.cloud_off,
+                              color: Colors.red,
+                              size: 28,
+                            ),
+                          );
+                        } else if (sync.hasPending) {
+                          // 🟡 Unsynced / pending
+                          statusWidget = Tooltip(
+                            key: ValueKey('pending'),
+                            message: 'Pending sync',
+                            child: Icon(
+                              Icons.sync_problem,
+                              color: Colors.orange,
+                              size: 28,
+                            ),
+                          );
+                        } else {
+                          // ✅ Fully synced
+                          statusWidget = Tooltip(
+                            key: ValueKey('synced'),
+                            message: 'Fully synced',
+                            child: Icon(
+                              Icons.cloud_done,
+                              color: Colors.green,
+                              size: 28,
+                            ),
+                          );
+                        }
+
+                        return AnimatedSwitcher(
+                          duration: Duration(milliseconds: 300),
+                          transitionBuilder: (child, animation) {
+                            return ScaleTransition(
+                              scale: animation,
+                              child: FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: statusWidget,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
@@ -304,7 +411,7 @@ class _UserViewState extends State<UserView> {
                         int index = rows.indexOf(row);
                         List<int> qtyItems = (row.product?.promo ?? false)
                             ? [row.product?.otherqty ?? 1]
-                            : List.generate(20, (i) => i + 1);
+                            : List.generate(50, (i) => i + 1);
 
                         // ensure keys lists are in sync
                         if (productDropdownKeys.length <= index) {
@@ -440,11 +547,28 @@ class _UserViewState extends State<UserView> {
                                                 style: TextStyle(fontSize: 14),
                                               );
                                             },
-                                        onChanged: (v) {
-                                          setState(() {
-                                            if (v != null) row.qty = v;
-                                          });
-                                        },
+                                       onChanged: (v) {
+  setState(() {
+    if (v != null) row.qty = v;
+
+    // Move to next row
+    int currentIndex = rows.indexOf(row);
+    if (currentIndex == rows.length - 1) {
+      // If last row, add a new row
+      _addEmptyRow();
+    }
+
+    // Focus next row's product dropdown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      int nextIndex = currentIndex + 1;
+      if (nextIndex < productDropdownKeys.length &&
+          productDropdownKeys[nextIndex].currentState != null) {
+        productDropdownKeys[nextIndex].currentState!.openDropDownSearch();
+      }
+    });
+  });
+},
+
                                       ),
                                     ),
                                   ],
@@ -613,11 +737,13 @@ class _UserViewState extends State<UserView> {
                                         style: TextStyle(fontSize: 14),
                                       );
                                     },
-                                    onChanged: (v) {
-                                      setState(() {
-                                        if (v != null) row.qty = v;
-                                      });
-                                    },
+                                   onChanged: (v) {
+  setState(() {
+    if (v != null) row.qty = v;
+  });
+},
+
+
                                   ),
                                 ),
 

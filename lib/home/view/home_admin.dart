@@ -32,7 +32,7 @@ final SaleService saleService = SaleService();
   List<GlobalKey<DropdownSearchState<Product>>> productDropdownKeys = [];
   List<GlobalKey<DropdownSearchState<int>>> qtyDropdownKeys = [];
 
-  List<String> fruits = ['Apple', 'Banana', 'Cherry', 'Date'];
+  // List<String> fruits = ['Apple', 'Banana', 'Cherry', 'Date'];  TEST
 
   List<String> getLowStockItems() {
     return dbProducts
