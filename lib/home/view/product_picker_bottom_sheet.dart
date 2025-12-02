@@ -24,7 +24,7 @@ class _ProductPickerBottomSheetState extends State<ProductPickerBottomSheet> {
       padding: MediaQuery.of(context).viewInsets,
       child: SafeArea(
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.75,
+          height: MediaQuery.of(context).size.height * 0.30,
           padding: EdgeInsets.all(12),
           child: Column(
             children: [
