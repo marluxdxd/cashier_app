@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/database/app_db.dart';
-import 'package:cashier_app/home/viewModel/product_service.dart';
 
 class AddProduct extends StatefulWidget {
   final VoidCallback? onProductAdded;
@@ -100,6 +99,10 @@ Column(
           Icon(
             promo ? Icons.check_box : Icons.check_box_outline_blank,
             size: 18, // small size
+          ),
+          Text(
+            '-1',
+            style: TextStyle(fontSize: 10),
           ),
         ],
       ),

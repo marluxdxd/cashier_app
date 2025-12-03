@@ -38,7 +38,8 @@ class AppDB {
         price INTEGER,
         qty INTEGER DEFAULT 0,
         otherqty INTEGER DEFAULT 0,
-        promo INTEGER DEFAULT 0
+        promo INTEGER DEFAULT 0,
+        pending INTEGER DEFAULT 0   -- NEW COLUMN
       )
     ''');
 
@@ -115,6 +116,11 @@ class AppDB {
         )
       ''');
 
+      // In _onUpgrade (for older versions)
+if (oldVersion < 7) {
+  await db.execute('ALTER TABLE products ADD COLUMN pending INTEGER DEFAULT 0');
+}
+
       final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM users'));
 
       if (count == 0) {
@@ -147,6 +153,7 @@ class AppDB {
       'qty': product.qty,
       'otherqty': product.otherqty,
       'promo': product.promo ? 1 : 0,
+      'pending': 1, // 1 = new/pending insert
     });
 
     SyncService.instance.syncAll();
@@ -180,6 +187,7 @@ class AppDB {
         'qty': product.qty,
         'otherqty': product.otherqty,
         'promo': product.promo ? 1 : 0,
+        'pending': 1, // 1 = pending update
       },
       where: 'id = ?',
       whereArgs: [product.id],
@@ -194,14 +202,17 @@ Future<void> seedDefaultProducts() async {
 }
 
 
-  Future<void> deleteProduct(int productId) async {
-    final db = await instance.database;
+  // Delete product locally and mark as pending for sync
+Future<void> deleteProduct(int productId) async {
+  final db = await instance.database;
 
-    await db.delete(
-      'products',
-      where: 'id = ?',
-      whereArgs: [productId],
-    );
+  // Mark as pending delete (2) instead of removing immediately
+  await db.update(
+    'products',
+    {'pending': 2}, // 2 = pending delete
+    where: 'id = ?',
+    whereArgs: [productId],
+  );
 
     SyncService.instance.syncAll();
   }

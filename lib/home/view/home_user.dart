@@ -89,11 +89,19 @@ List<FocusNode> productFocusNodes = [];
   }
 
   int calculateTotal(RowData row) {
-    if (row.product == null) return 0;
-    final price = row.product!.price.toInt();
-    if (row.product!.promo) return (row.qty * price) - 1;
-    return row.qty * price;
+  if (row.product == null) return 0;
+
+  final price = row.product!.price.toInt();
+
+  // PROMO: total = price (do not multiply qty)
+  if (row.product!.promo) {
+    return price;
   }
+
+  // NORMAL: qty × price
+  return row.qty * price;
+}
+
 
   int get totalBill => rows.fold(0, (sum, row) => sum + calculateTotal(row));
 
@@ -483,7 +491,8 @@ List<FocusNode> productFocusNodes = [];
                 SizedBox(width: 8),
                 Expanded(
                   flex: 2,
-                  child: Text("₱${row.product?.price ?? 0}",
+                  child: Text(
+                    "₱${row.product?.price ?? 0}",
                       textAlign: TextAlign.center),
                 ),
                 SizedBox(width: 8),
@@ -556,7 +565,7 @@ List<FocusNode> productFocusNodes = [];
                   .asMap()
                   .entries
                   .map((e) => buildPOSRow(e.value, e.key, isSmall))
-                  .toList(),
+                  ,
               SizedBox(height: 20),
               Container(
                 padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),

@@ -1,11 +1,6 @@
 import 'package:cashier_app/database/app_db.dart';
 import 'package:cashier_app/home/view/home_admin.dart';
 import 'package:cashier_app/home/view/home_user.dart';
-import 'package:cashier_app/home/view/product_add.dart';
-import 'package:cashier_app/home/view/product_list_view.dart';
-import 'package:cashier_app/home/view/product_stock.dart';
-import 'package:cashier_app/home/view/sales_history.dart';
-import 'package:cashier_app/home/view/sales_report_new.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/database/database_backup.dart';
 

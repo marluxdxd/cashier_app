@@ -10,6 +10,7 @@ class Product {
   bool promo;
   int? fixedQty;
   bool promoApplied;
+  bool pending = false; // NEW flag to mark local changes
 
   Product({
     this.id,

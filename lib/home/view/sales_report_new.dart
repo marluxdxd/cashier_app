@@ -154,7 +154,7 @@ Future<void> loadSalesByRange() async {
           content.add(pw.Divider());
           content.add(pw.SizedBox(height: 10));
 
-          salesByDate.entries.forEach((entry) {
+          for (var entry in salesByDate.entries) {
             final date = entry.key;
             final sales = entry.value;
 
@@ -187,7 +187,7 @@ Future<void> loadSalesByRange() async {
             );
 
             // Row items
-            sales.forEach((s) {
+            for (var s in sales) {
               content.add(
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -200,7 +200,7 @@ Future<void> loadSalesByRange() async {
                   ],
                 ),
               );
-            });
+            }
 
             // Daily subtotal
             final dailyTotal = sales.fold(0, (sum, s) => sum + s.total);
@@ -217,7 +217,7 @@ Future<void> loadSalesByRange() async {
             );
 
             content.add(pw.Divider());
-          });
+          }
 
           content.add(pw.SizedBox(height: 10));
           content.add(
