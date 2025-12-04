@@ -23,7 +23,7 @@ class AppDB {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -39,7 +39,9 @@ class AppDB {
         qty INTEGER DEFAULT 0,
         otherqty INTEGER DEFAULT 0,
         promo INTEGER DEFAULT 0,
-        pending INTEGER DEFAULT 0   -- NEW COLUMN
+        pending INTEGER DEFAULT 0,   -- 0 = synced, 1 = needs upload
+        deleted INTEGER DEFAULT 0,    -- 0 = active, 1 = deleted locally (soft delete)
+        pending_delete INTEGER DEFAULT 0
       )
     ''');
 
@@ -51,7 +53,9 @@ class AppDB {
         price INTEGER,
         total INTEGER,
         promoDiscount INTEGER DEFAULT 0,
-        date TEXT
+        date TEXT,
+        pending INTEGER DEFAULT 0,
+        deleted INTEGER DEFAULT 0
       )
     ''');
 
@@ -72,7 +76,7 @@ class AppDB {
     });
 
     // Auto sync after create
-    SyncService.instance.syncAll();
+    // SyncService.instance.syncAll();
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -118,7 +122,19 @@ class AppDB {
 
       // In _onUpgrade (for older versions)
 if (oldVersion < 7) {
-  await db.execute('ALTER TABLE products ADD COLUMN pending INTEGER DEFAULT 0');
+  // Add missing columns safely - wrap in try/catch because SQLite will throw if column already exists
+  try {
+    await db.execute('ALTER TABLE products ADD COLUMN pending INTEGER DEFAULT 0');
+  } catch (_) {}
+  try {
+    await db.execute('ALTER TABLE products ADD COLUMN deleted INTEGER DEFAULT 0');
+  } catch (_) {}
+  try {
+    await db.execute('ALTER TABLE sales ADD COLUMN pending INTEGER DEFAULT 0');
+  } catch (_) {}
+  try {
+    await db.execute('ALTER TABLE sales ADD COLUMN deleted INTEGER DEFAULT 0');
+  } catch (_) {}
 }
 
       final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM users'));
@@ -133,7 +149,7 @@ if (oldVersion < 7) {
     }
 
     // Auto sync on upgrade
-    SyncService.instance.syncAll();
+    // SyncService.instance.syncAll();
   }
 
   Future close() async {
@@ -145,20 +161,20 @@ if (oldVersion < 7) {
 
   // Products
   Future<int> insertProduct(Product product) async {
-    final db = await instance.database;
+  final db = await instance.database;
+  final id = await db.insert('products', {
+    'name': product.name,
+    'price': product.price.toInt(),
+    'qty': product.qty,
+    'otherqty': product.otherqty,
+    'promo': product.promo ? 1 : 0,
+    'pending': 1,
+    'deleted': 0,
+  });
+  // optionally trigger immediate sync: SyncService.instance.syncAll();
+  return id;
+}
 
-    final id = await db.insert('products', {
-      'name': product.name,
-      'price': product.price.toInt(),
-      'qty': product.qty,
-      'otherqty': product.otherqty,
-      'promo': product.promo ? 1 : 0,
-      'pending': 1, // 1 = new/pending insert
-    });
-
-    SyncService.instance.syncAll();
-    return id;
-  }
 
   Future<List<Product>> fetchProducts() async {
     final db = await instance.database;
@@ -177,24 +193,52 @@ if (oldVersion < 7) {
   }
 
   Future<void> updateProduct(Product product) async {
-    final db = await instance.database;
+  final db = await instance.database;
+  await db.update(
+    'products',
+    {
+      'name': product.name,
+      'price': product.price.toInt(),
+      'qty': product.qty,
+      'otherqty': product.otherqty,
+      'promo': product.promo ? 1 : 0,
+      'pending': 1, // mark changed
+    },
+    where: 'id = ?',
+    whereArgs: [product.id],
+  );
+}
 
-    await db.update(
-      'products',
-      {
-        'name': product.name,
-        'price': product.price.toInt(),
-        'qty': product.qty,
-        'otherqty': product.otherqty,
-        'promo': product.promo ? 1 : 0,
-        'pending': 1, // 1 = pending update
-      },
-      where: 'id = ?',
-      whereArgs: [product.id],
-    );
+Future<void> updateSale(Sale sale) async {
+  final db = await instance.database;
+  await db.update(
+    'sales',
+    {
+      'productName': sale.productName,
+      'qty': sale.qty,
+      'price': sale.price,
+      'total': sale.total,
+      'promoDiscount': sale.promoDiscount ?? 0,
+      'date': sale.date,
+      'pending': sale.pending ?? 0,  // Sale model must include pending
+      'deleted': sale.deleted ?? 0,
+    },
+    where: 'id = ?',
+    whereArgs: [sale.id],
+  );
+}
 
-    SyncService.instance.syncAll();
-  }
+Future<void> softDeleteProduct(int productId) async {
+  final db = await instance.database;
+  await db.update(
+    'products',
+    {'deleted': 1, 'pending': 1},
+    where: 'id = ?',
+    whereArgs: [productId],
+  );
+}
+
+
 
 Future<void> seedDefaultProducts() async {
   // No default products inserted
@@ -214,25 +258,25 @@ Future<void> deleteProduct(int productId) async {
     whereArgs: [productId],
   );
 
-    SyncService.instance.syncAll();
+    // SyncService.instance.syncAll();
   }
 
   // Sales
   Future<int> insertSale(Sale sale) async {
-    final db = await instance.database;
+  final db = await instance.database;
+  final id = await db.insert('sales', {
+    'productName': sale.productName,
+    'qty': sale.qty,
+    'price': sale.price,
+    'total': sale.total,
+    'promoDiscount': sale.promoDiscount ?? 0,
+    'date': sale.date,
+    'pending': 1,
+    'deleted': 0,
+  });
+  return id;
+}
 
-    final id = await db.insert('sales', {
-      'productName': sale.productName,
-      'qty': sale.qty,
-      'price': sale.price,
-      'total': sale.total,
-      'promoDiscount': sale.promoDiscount ?? 0,
-      'date': sale.date,
-    });
-
-    SyncService.instance.syncAll();
-    return id;
-  }
 
   Future<List<Sale>> fetchAllSales() async {
     final db = await instance.database;
@@ -250,7 +294,7 @@ Future<void> deleteProduct(int productId) async {
       whereArgs: [id],
     );
 
-    SyncService.instance.syncAll();
+    // SyncService.instance.syncAll();
     return result;
   }
 
@@ -278,7 +322,7 @@ Future<void> deleteProduct(int productId) async {
       'role': role
     });
 
-    SyncService.instance.syncAll();
+    // SyncService.instance.syncAll();
     return id;
   }
 

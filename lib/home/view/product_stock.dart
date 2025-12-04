@@ -1,3 +1,4 @@
+import 'package:cashier_app/home/viewModel/product_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/database/app_db.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
@@ -62,11 +63,12 @@ Future<void> loadProducts() async {
             onPressed: () async {
               int newQty = int.tryParse(qtyController.text) ?? product.qty;
 
-              // ❗ Simply update the stock to newQty
+              // Update product object
               product.qty = newQty;
+              product.pending = 1; // mark as changed
 
-              // Update DB
-              await AppDB.instance.updateProduct(product);
+              // ✅ Use ProductService to update locally + sync Supabase
+              await ProductService().updateProductBoth(product);
 
               // 🔥 Refresh product list immediately
               await loadProducts();
@@ -85,6 +87,7 @@ Future<void> loadProducts() async {
     },
   );
 }
+
 
 
 

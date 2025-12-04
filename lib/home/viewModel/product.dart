@@ -1,7 +1,7 @@
 import 'package:cashier_app/home/viewModel/product_service.dart';
 
 class Product {
-  int? id; 
+  int? id;
   int qty;
   int otherqty;
   String name;
@@ -10,7 +10,8 @@ class Product {
   bool promo;
   int? fixedQty;
   bool promoApplied;
-  bool pending = false; // NEW flag to mark local changes
+int pending; // 0 or 1
+int deleted; // 0 or 1
 
   Product({
     this.id,
@@ -22,6 +23,8 @@ class Product {
     this.promo = false,
     this.fixedQty,
     this.promoApplied = false,
+    this.pending = 0,
+  this.deleted = 0,
   });
 
   double get total => qty * price;
@@ -33,6 +36,7 @@ class Product {
     if (soldQty > qty) throw Exception("$name: Not enough stock");
 
     qty -= soldQty;
+    pending = 1; // mark as changed
 
     if (id != null) {
       await ProductService().updateProductBoth(this);
@@ -44,6 +48,7 @@ class Product {
     if (addedQty <= 0) return;
 
     qty += addedQty;
+    pending = 1; // mark as changed
 
     if (id != null) {
       await ProductService().updateProductBoth(this);

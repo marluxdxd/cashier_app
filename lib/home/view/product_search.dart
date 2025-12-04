@@ -15,6 +15,9 @@ class _SearchProductState extends State<SearchProduct> {
   List<Product> filteredProducts = [];
   TextEditingController searchController = TextEditingController();
 
+  // Track which product is being deleted
+  Map<int, bool> deletingMap = {};
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +31,147 @@ class _SearchProductState extends State<SearchProduct> {
       products = productsFromDB;
       filteredProducts = products;
     });
+  }
+
+  // Confirm delete
+  void confirmDeleteProduct(Product product) async {
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Are you sure?"),
+        content: Text("Do you really want to delete ${product.name}?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Start loading spinner (set the product as deleting)
+              setState(() {
+                deletingMap[product.id!] = true;
+              });
+
+              // Delete locally + Supabase
+              await ProductService().deleteProductBoth(product.id!);
+
+              // Refresh product list after deletion
+              await loadProducts();
+
+              // Stop loading spinner (set the product as not deleting)
+              setState(() {
+                deletingMap[product.id!] = false;
+              });
+
+              Navigator.pop(context); // Close the dialog
+            },
+            child: Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    // If confirmation is false, do nothing
+    if (confirm == false) {
+      return;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Display all products', style: TextStyle(fontSize: 12)),
+      content: SizedBox(
+        width: 500,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Search field
+              TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: "Search products",
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onChanged: filterProducts,
+              ),
+              SizedBox(height: 15),
+
+              // Scrollable table
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Table(
+                  border: TableBorder.all(color: Colors.grey),
+                  columnWidths: {
+                    0: IntrinsicColumnWidth(),
+                    1: IntrinsicColumnWidth(),
+                    2: IntrinsicColumnWidth(),
+                    3: IntrinsicColumnWidth(),
+                    4: IntrinsicColumnWidth(),
+                  },
+                  children: [
+                    TableRow(
+                      decoration: BoxDecoration(color: Colors.grey[200]),
+                      children: [
+                        Padding(padding: EdgeInsets.all(6), child: Text('Qty')),
+                        Padding(padding: EdgeInsets.all(6), child: Text('Item')),
+                        Padding(padding: EdgeInsets.all(6), child: Text('Price')),
+                        Padding(padding: EdgeInsets.all(6), child: Text('Total')),
+                        Padding(padding: EdgeInsets.all(6), child: Text('Action')),
+                      ],
+                    ),
+                    ...filteredProducts.map((product) {
+                      final isDeleting = deletingMap[product.id!] ?? false;
+
+                      return TableRow(
+                        children: [
+                          Padding(padding: EdgeInsets.all(6), child: Text(product.qty.toString())),
+                          Padding(padding: EdgeInsets.all(6), child: Text(product.name)),
+                          Padding(padding: EdgeInsets.all(6), child: Text('₱${product.price}')),
+                          Padding(padding: EdgeInsets.all(6), child: Text('₱${product.qty * product.price}')),
+                          Padding(
+                            padding: EdgeInsets.all(6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Edit button
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () => editProduct(product),
+                                ),
+                                // Delete button
+                                isDeleting
+                                    ? SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : IconButton(
+                                        icon: Icon(Icons.delete, color: Colors.red),
+                                        onPressed: () => confirmDeleteProduct(product),
+                                      ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text('Close')),
+      ],
+    );
   }
 
   // Filter products by search
@@ -87,135 +231,6 @@ class _SearchProductState extends State<SearchProduct> {
           ),
         ],
       ),
-    );
-  }
-
-  // Confirm delete
-  void confirmDeleteProduct(Product product) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text("Are you sure?"),
-        content: Text("Do you really want to delete ${product.name}?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              // Delete local + Supabase
-              await ProductService().deleteProductBoth(product.id!);
-
-              // Refresh list
-              await loadProducts();
-
-              Navigator.pop(context);
-            },
-            child: Text("Delete", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text('Display all products', style: TextStyle(fontSize: 12)),
-      content: SizedBox(
-        width: 500,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Search field
-              TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: "Search products",
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onChanged: filterProducts,
-              ),
-              SizedBox(height: 15),
-
-              // Scrollable table
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Table(
-                  border: TableBorder.all(color: Colors.grey),
-                  columnWidths: {
-                    0: IntrinsicColumnWidth(),
-                    1: IntrinsicColumnWidth(),
-                    2: IntrinsicColumnWidth(),
-                    3: IntrinsicColumnWidth(),
-                    4: IntrinsicColumnWidth(),
-                  },
-                  children: [
-                    TableRow(
-                      decoration: BoxDecoration(color: Colors.grey[200]),
-                      children: [
-                        Padding(
-                            padding: EdgeInsets.all(6), child: Text('Qty')),
-                        Padding(
-                            padding: EdgeInsets.all(6), child: Text('Item')),
-                        Padding(
-                            padding: EdgeInsets.all(6), child: Text('Price')),
-                        Padding(
-                            padding: EdgeInsets.all(6), child: Text('Total')),
-                        Padding(
-                            padding: EdgeInsets.all(6), child: Text('Action')),
-                      ],
-                    ),
-                    ...filteredProducts.map((product) {
-                      return TableRow(
-                        children: [
-                          Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Text(product.qty.toString())),
-                          Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Text(product.name)),
-                          Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Text('₱${product.price}')),
-                          Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Text('₱${product.qty * product.price}')),
-                          Padding(
-                            padding: EdgeInsets.all(6),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () => editProduct(product),
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => confirmDeleteProduct(product),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context), child: Text('Close')),
-      ],
     );
   }
 }

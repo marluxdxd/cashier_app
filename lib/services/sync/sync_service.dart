@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../database/app_db.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:cashier_app/services/sync/sync_queue.dart';
 
 class SyncService {
   static final SyncService instance = SyncService._init();
@@ -13,6 +14,7 @@ class SyncService {
   SyncService._init();
 
   final supabase = Supabase.instance.client;
+  final _queue = SyncQueue.instance; // 👈 ADD THIS
 
 
 //Delete both sqflite and supabase
@@ -29,7 +31,10 @@ class SyncService {
     // 2️⃣ Delete in Supabase
     if (await _isOnline()) {
       try {
-        await supabase.from('sales').delete().eq('id', id);
+        _queue.add(() async {
+  await supabase.from('sales').delete().eq('id', id);
+});
+
         print("Deleted in Supabase");
       } catch (e) {
         print("Supabase delete failed: $e");
@@ -56,46 +61,51 @@ class SyncService {
   // --------------------------
   // START AUTO-SYNC
   // --------------------------
-  void startAutoSync() {
-    // Sync every 30 seconds
-    _timer = Timer.periodic(Duration(seconds: 30), (_) {
-      syncAll();
-    });
+  void startAutoSync({int intervalSeconds = 30}) {
+  // 1️⃣ Periodic sync
+  _timer = Timer.periodic(Duration(seconds: intervalSeconds), (_) async {
+    if (await _isOnline()) {
+      await syncAll();
+    }
+  });
 
-    // Listen to internet connection
-    Connectivity().onConnectivityChanged.listen((status) {
-      if (status != ConnectivityResult.none) {
-        syncAll();
-      }
-    });
+  // 2️⃣ Listen for connectivity changes
+  Connectivity().onConnectivityChanged.listen((status) async {
+    if (status != ConnectivityResult.none) {
+      await syncAll();
+    }
+  });
 
-    print("AUTO SYNC STARTED");
-  }
+  print("AUTO SYNC STARTED ⏱️");
+}
+
 
   // --------------------------
   // SYNC EVERYTHING
   // --------------------------
-  Future<void> syncAll() async {
-    if (_isSyncing) return;
+ Future<void> syncAll() async {
+  if (_isSyncing) return;
+  _isSyncing = true;
 
-    _isSyncing = true;
+  try {
+    // 1️⃣ Upload local changes to cloud first
+    await syncProductsUpload();
+    await syncSalesUpload();
+    await syncUsersUpload();
 
-    try {
-      await syncProductsUpload();
-      await syncSalesUpload();
-      await syncUsersUpload();
+    // 2️⃣ Download cloud changes to local (optional, ensures cloud changes are reflected)
+    await syncProductsDownload();
+    await syncSalesDownload();
+    await syncUsersDownload();
 
-      await syncProductsDownload();
-      await syncSalesDownload();
-      await syncUsersDownload();
-
-      print("SYNC COMPLETE");
-    } catch (e) {
-      print("SYNC ERROR → $e");
-    }
-
-    _isSyncing = false;
+    print("SYNC COMPLETE ✅");
+  } catch (e) {
+    print("SYNC ERROR → $e");
   }
+
+  _isSyncing = false;
+}
+
 
   // --------------------------
   // UPLOAD FROM LOCAL → CLOUD

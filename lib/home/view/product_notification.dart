@@ -26,46 +26,48 @@ class ProductNotification extends StatelessWidget {
       ),
       content: SizedBox(
         width: 350,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'The following items have low stock (below 10):',
-              style: TextStyle(fontSize: 14),
-            ),
-            const SizedBox(height: 12),
-
-            // No low items
-            if (lowItems.isEmpty)
+        child: Container(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               const Text(
-                "No items are low on stock!",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.green,
-                  fontWeight: FontWeight.bold,
-                ),
+                'The following items have low stock (below 10):',
+                style: TextStyle(fontSize: 14),
               ),
-
-            // List of low items
-            ...lowItems.map(
-              (name) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.error, color: Colors.red, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        name,
-                        style: const TextStyle(fontSize: 14),
+              const SizedBox(height: 12),
+          
+              // No low items
+              if (lowItems.isEmpty)
+                const Text(
+                  "No items are low on stock!",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+          
+              // List of low items
+              ...lowItems.map(
+                (name) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error, color: Colors.red, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [

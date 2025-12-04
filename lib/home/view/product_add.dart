@@ -1,3 +1,5 @@
+import 'package:cashier_app/database/product_service.dart';
+import 'package:cashier_app/home/viewModel/product_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cashier_app/home/viewModel/product.dart';
 import 'package:cashier_app/database/app_db.dart';
@@ -24,44 +26,34 @@ class _AddProductState extends State<AddProduct> {
   TextEditingController qty1Controller = TextEditingController();
 
   void addProduct() async {
-    if (_formKey.currentState!.validate()) {
-      final product = Product(
-        name: nameController.text,
-        price: double.tryParse(priceController.text) ?? 0,
-        qty: int.tryParse(qtyController.text) ?? 0, // ✅ Save qty
-        otherqty: int.tryParse(qty1Controller.text) ?? 0, // ✅ Save qty
-        promo: promo, // ✅ set from IconButton
-        
-      );
+  if (_formKey.currentState!.validate()) {
+    final product = Product(
+      name: nameController.text,
+      price: double.tryParse(priceController.text) ?? 0,
+      qty: int.tryParse(qtyController.text) ?? 0,
+      otherqty: int.tryParse(qty1Controller.text) ?? 0,
+      promo: promo,
+    );
 
-      // Insert product into database
-      await AppDB.instance.insertProduct(product);
+    // SAVE LOCAL + SUPABASE
+    await ProductService().insertProductBoth(product);
 
-      // 🔔 Notify parent to refresh immediately
-      if (widget.onProductAdded != null) {
-        widget.onProductAdded!();
-      }
+    // Notify parent
+    widget.onProductAdded?.call();
 
-      // ✅ Clear fields to add next product
-      nameController.clear();
+    // Reset fields
+    nameController.clear();
+    priceController.clear();
+    qtyController.clear();
+    qty1Controller.clear();
+    retainPriceController.clear();
 
-      priceController.clear();
-      qtyController.clear();
-      qty1Controller.clear();
-      retainPriceController.clear();
-
-      qtyController.text = "";
-      qty1Controller.text = "";
-
-      // ✅ Optional: Focus back to the name field
-      FocusScope.of(context).requestFocus(FocusNode());
-
-      // Show a small SnackBar or message for confirmation
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Product added! You can add another.')),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Product added and synced when online!')),
+    );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
