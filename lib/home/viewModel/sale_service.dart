@@ -16,7 +16,6 @@ class SaleService {
     final id = await db.insert('sales', {
       ...sale.toMap(),
       'pending': 1,       // mark as pending sync
-      'pending_delete': 0 // not pending deletion
     });
 
     print("🟡 Saved sale locally (pending): id=$id");
@@ -61,7 +60,7 @@ class SaleService {
 
     // Mark all sales as pending deletion
     await db.update('sales', {
-      'pending_delete': 1,
+     
     });
 
     print("🟡 Marked all sales as pending deletion locally");

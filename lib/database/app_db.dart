@@ -40,8 +40,8 @@ class AppDB {
         otherqty INTEGER DEFAULT 0,
         promo INTEGER DEFAULT 0,
         pending INTEGER DEFAULT 0,   -- 0 = synced, 1 = needs upload
-        deleted INTEGER DEFAULT 0,    -- 0 = active, 1 = deleted locally (soft delete)
-        pending_delete INTEGER DEFAULT 0
+        deleted INTEGER DEFAULT 0    -- 0 = active, 1 = deleted locally (soft delete)
+        
       )
     ''');
 

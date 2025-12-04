@@ -23,7 +23,6 @@ Future<void> insertProductBoth(Product product) async {
     'Promo': product.promo ? 1 : 0,
     'pending': 1,
     'deleted': 0,
-    'pending_delete': 0,
   });
 
   print("🟡 Saved locally (pending): id=$localId");
