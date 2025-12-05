@@ -11,7 +11,7 @@ class Product {
   int? fixedQty;
   bool promoApplied;
 int pending; // 0 or 1
-int deleted; // 0 or 1
+
 
   Product({
     this.id,
@@ -24,7 +24,7 @@ int deleted; // 0 or 1
     this.fixedQty,
     this.promoApplied = false,
     this.pending = 0,
-  this.deleted = 0,
+
   });
 
   double get total => qty * price;

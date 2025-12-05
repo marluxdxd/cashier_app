@@ -3,6 +3,7 @@ import 'package:cashier_app/home/view/product_picker_bottom_sheet.dart';
 import 'package:cashier_app/home/view/product_search.dart';
 import 'package:cashier_app/home/view/qty_picker_bottom_sheet.dart';
 import 'package:cashier_app/home/viewModel/sync_status.dart';
+import 'package:cashier_app/services/sync/sync_service.dart';
 import 'package:cashier_app/widget/app_drawer.dart';
 import 'package:cashier_app/widget/app_drawer_user.dart';
 import 'package:cashier_app/widget/notificationbell.dart';
@@ -25,12 +26,13 @@ class TestView1 extends StatefulWidget {
 }
 
 class _TestView1State extends State<TestView1> {
+  bool isSyncOn = false;
+  bool isAutoSyncOn = false;
   final SaleService saleService = SaleService();
-
   List<GlobalKey<DropdownSearchState<Product>>> productDropdownKeys = [];
   List<GlobalKey<DropdownSearchState<int>>> qtyDropdownKeys = [];
   List<GlobalKey> productInkWellKeys = [];
-List<FocusNode> productFocusNodes = [];
+  List<FocusNode> productFocusNodes = [];
   List<Product> dbProducts = [];
   List<RowData> rows = [];
 
@@ -91,21 +93,24 @@ List<FocusNode> productFocusNodes = [];
   }
 
   int calculateTotal(RowData row) {
-  if (row.product == null) return 0;
+    if (row.product == null) return 0;
 
-  final price = row.product!.price.toInt();
+    final price = row.product!.price.toInt();
 
-  // PROMO: total = price (do not multiply qty)
-  if (row.product!.promo) {
-    return price;
+    // PROMO: total = price (do not multiply qty)
+    if (row.product!.promo) {
+      return price;
+    }
+
+    // NORMAL: qty × price
+    return row.qty * price;
   }
 
-  // NORMAL: qty × price
-  return row.qty * price;
-}
-
-
   int get totalBill => rows.fold(0, (sum, row) => sum + calculateTotal(row));
+
+
+
+
 
   void _addEmptyRow() {
     setState(() {
@@ -128,7 +133,8 @@ List<FocusNode> productFocusNodes = [];
       if (row.product != null && row.qty > 0) {
         if (row.qty > row.product!.qty) {
           insufficientStockProducts.add(
-              "${row.product!.name} (Available: ${row.product!.qty})");
+            "${row.product!.name} (Available: ${row.product!.qty})",
+          );
         }
       }
     }
@@ -205,7 +211,6 @@ List<FocusNode> productFocusNodes = [];
   }
 
   List<String> getLowStockItems() {
-    
     return dbProducts
         .where((p) => p.qty < 10)
         .map((p) => "${p.name} (Qty: ${p.qty})")
@@ -225,6 +230,25 @@ List<FocusNode> productFocusNodes = [];
       child: isSmall
           ? Column(
               children: [
+                Text(
+                  "Auto-Sync is ${isSyncOn ? 'ON' : 'OFF'}",
+                  style: TextStyle(fontSize: 10),
+                ),
+                  ElevatedButton(
+          onPressed: () {
+            setState(() {
+              if (!isAutoSyncOn) {
+                SyncService.instance.startAutoSync(intervalSeconds: 30);
+                isAutoSyncOn = true;
+              } else {
+                SyncService.instance.stopAutoSync();
+                isAutoSyncOn = false;
+              }
+            });
+          },
+          child: Text(isAutoSyncOn ? "Stop Auto-Sync" : "Start Auto-Sync"),
+        ),
+
                 Row(
                   children: [
                     Expanded(
@@ -234,14 +258,17 @@ List<FocusNode> productFocusNodes = [];
                         onTap: () async {
                           final selectedProduct =
                               await showModalBottomSheet<Product>(
-                            context: context,
-                            isScrollControlled: true,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16))),
-                            builder: (_) =>
-                                ProductPickerBottomSheet(products: dbProducts),
-                          );
+                                context: context,
+                                isScrollControlled: true,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16),
+                                  ),
+                                ),
+                                builder: (_) => ProductPickerBottomSheet(
+                                  products: dbProducts,
+                                ),
+                              );
 
                           if (selectedProduct == null) return;
 
@@ -252,18 +279,17 @@ List<FocusNode> productFocusNodes = [];
                                 : (row.qty == 0 ? 1 : row.qty);
 
                             if (row == rows.last) _addEmptyRow();
-
-                            
                           });
 
                           if (!selectedProduct.promo) {
-                            final selectedQty =
-                                await showModalBottomSheet<int>(
+                            final selectedQty = await showModalBottomSheet<int>(
                               context: context,
                               isScrollControlled: true,
                               shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(16))),
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                              ),
                               builder: (_) => QtyPickerBottomSheet(maxQty: 50),
                             );
 
@@ -274,10 +300,13 @@ List<FocusNode> productFocusNodes = [];
                         },
                         child: Container(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 12),
+                            horizontal: 8,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey),
-                              borderRadius: BorderRadius.circular(4)),
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
                           child: Text(
                             row.product?.name ?? "Select product...",
                             style: TextStyle(fontSize: 14),
@@ -292,7 +321,9 @@ List<FocusNode> productFocusNodes = [];
                       child: row.product == null
                           ? Container(
                               padding: EdgeInsets.symmetric(
-                                  vertical: 12, horizontal: 8),
+                                vertical: 12,
+                                horizontal: 8,
+                              ),
                               decoration: BoxDecoration(
                                 border: Border.all(color: Colors.grey),
                                 borderRadius: BorderRadius.circular(4),
@@ -301,64 +332,70 @@ List<FocusNode> productFocusNodes = [];
                               child: Text(''),
                             )
                           : row.product!.promo
-                              ? Container(
-                                  padding: EdgeInsets.symmetric(
-                                      vertical: 12, horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    border:
-                                        Border.all(color: Colors.grey.shade400),
-                                    borderRadius: BorderRadius.circular(4),
-                                    color: Colors.grey[200],
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    "${row.product!.otherqty}",
-                                    style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                )
-                              : InkWell(
-                                  onTap: () async {
-                                    final selectedQty =
-                                        await showModalBottomSheet<int>(
+                          ? Container(
+                              padding: EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(4),
+                                color: Colors.grey[200],
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                "${row.product!.otherqty}",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : InkWell(
+                              onTap: () async {
+                                final selectedQty =
+                                    await showModalBottomSheet<int>(
                                       context: context,
                                       isScrollControlled: true,
                                       shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.vertical(
-                                              top: Radius.circular(16))),
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(16),
+                                        ),
+                                      ),
                                       builder: (_) =>
                                           QtyPickerBottomSheet(maxQty: 50),
                                     );
-                                    if (selectedQty != null) {
-                                      setState(() {
-                                        row.qty = selectedQty;
-                                        if (row == rows.last) _addEmptyRow();
-                                      });
-                                    }
-                                  },
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                        vertical: 12, horizontal: 8),
-                                    decoration: BoxDecoration(
-                                        border: Border.all(color: Colors.grey),
-                                        borderRadius: BorderRadius.circular(4)),
-                                    alignment: Alignment.center,
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          "${row.qty > 0 ? row.qty : ''}",
-                                          style: TextStyle(fontSize: 10),
-                                        ),
-                                        SizedBox(width: 6),
-                                        Icon(Icons.arrow_drop_down),
-                                      ],
-                                    ),
-                                  ),
+                                if (selectedQty != null) {
+                                  setState(() {
+                                    row.qty = selectedQty;
+                                    if (row == rows.last) _addEmptyRow();
+                                  });
+                                }
+                              },
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: 12,
+                                  horizontal: 8,
                                 ),
-                    )
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                alignment: Alignment.center,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      "${row.qty > 0 ? row.qty : ''}",
+                                      style: TextStyle(fontSize: 10),
+                                    ),
+                                    SizedBox(width: 6),
+                                    Icon(Icons.arrow_drop_down),
+                                  ],
+                                ),
+                              ),
+                            ),
+                    ),
                   ],
                 ),
                 SizedBox(height: 10),
@@ -367,15 +404,21 @@ List<FocusNode> productFocusNodes = [];
                   children: [
                     Expanded(
                       flex: 3,
-                      child: Text("₱${row.product?.price ?? 0}",
-                          style: TextStyle(fontSize: 14)),
+                      child: Text(
+                        "₱${row.product?.price ?? 0}",
+                        style: TextStyle(fontSize: 14),
+                      ),
                     ),
                     Expanded(
                       flex: 3,
-                      child: Text("₱${calculateTotal(row)}",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, color: Colors.red)),
+                      child: Text(
+                        "₱${calculateTotal(row)}",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
                     ),
                     IconButton(
                       icon: Icon(Icons.delete, color: Colors.red),
@@ -386,7 +429,7 @@ List<FocusNode> productFocusNodes = [];
                       },
                     ),
                   ],
-                )
+                ),
               ],
             )
           : Row(
@@ -398,14 +441,16 @@ List<FocusNode> productFocusNodes = [];
                     onTap: () async {
                       final selectedProduct =
                           await showModalBottomSheet<Product>(
-                        context: context,
-                        isScrollControlled: true,
-                        shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.vertical(top: Radius.circular(16))),
-                        builder: (_) =>
-                            ProductPickerBottomSheet(products: dbProducts),
-                      );
+                            context: context,
+                            isScrollControlled: true,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(16),
+                              ),
+                            ),
+                            builder: (_) =>
+                                ProductPickerBottomSheet(products: dbProducts),
+                          );
 
                       if (selectedProduct == null) return;
 
@@ -423,8 +468,10 @@ List<FocusNode> productFocusNodes = [];
                           context: context,
                           isScrollControlled: true,
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16))),
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                          ),
                           builder: (_) => QtyPickerBottomSheet(maxQty: 50),
                         );
 
@@ -434,10 +481,14 @@ List<FocusNode> productFocusNodes = [];
                       }
                     },
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(4)),
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
                       child: Text(
                         row.product?.name ?? "Select product...",
                         overflow: TextOverflow.ellipsis,
@@ -456,8 +507,10 @@ List<FocusNode> productFocusNodes = [];
                           context: context,
                           isScrollControlled: true,
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.vertical(top: Radius.circular(16))),
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                          ),
                           builder: (_) => QtyPickerBottomSheet(maxQty: 50),
                         );
 
@@ -469,23 +522,27 @@ List<FocusNode> productFocusNodes = [];
                       }
                     },
                     child: Container(
-                      padding:
-                          EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 8,
+                      ),
                       decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(4),
-                          color: row.product?.promo == true
-                              ? Colors.grey[200]
-                              : Colors.white),
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(4),
+                        color: row.product?.promo == true
+                            ? Colors.grey[200]
+                            : Colors.white,
+                      ),
                       alignment: Alignment.center,
                       child: Text(
                         row.product?.promo == true
                             ? "${row.product!.otherqty}"
                             : "${row.qty > 0 ? row.qty : ''}",
                         style: TextStyle(
-                            fontWeight: row.product?.promo == true
-                                ? FontWeight.bold
-                                : FontWeight.normal),
+                          fontWeight: row.product?.promo == true
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
                       ),
                     ),
                   ),
@@ -495,15 +552,20 @@ List<FocusNode> productFocusNodes = [];
                   flex: 2,
                   child: Text(
                     "₱${row.product?.price ?? 0}",
-                      textAlign: TextAlign.center),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
                 SizedBox(width: 8),
                 Expanded(
                   flex: 2,
-                  child: Text("₱${calculateTotal(row)}",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: Colors.red)),
+                  child: Text(
+                    "₱${calculateTotal(row)}",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
                 ),
                 SizedBox(width: 8),
                 SizedBox(
@@ -551,7 +613,7 @@ List<FocusNode> productFocusNodes = [];
             },
           ),
 
-                    IconButton(
+          IconButton(
             icon: Icon(Icons.search, color: Colors.black, size: 30),
             onPressed: () {
               showDialog(
@@ -575,11 +637,9 @@ List<FocusNode> productFocusNodes = [];
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 20),
-              ...rows
-                  .asMap()
-                  .entries
-                  .map((e) => buildPOSRow(e.value, e.key, isSmall))
-                  ,
+              ...rows.asMap().entries.map(
+                (e) => buildPOSRow(e.value, e.key, isSmall),
+              ),
               SizedBox(height: 20),
               Container(
                 padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -597,14 +657,21 @@ List<FocusNode> productFocusNodes = [];
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Total Bill",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18)),
-                    Text("₱$totalBill",
-                        style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red)),
+                    Text(
+                      "Total Bill",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    Text(
+                      "₱$totalBill",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red,
+                      ),
+                    ),
                   ],
                 ),
               ),

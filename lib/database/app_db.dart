@@ -39,9 +39,7 @@ class AppDB {
         qty INTEGER DEFAULT 0,
         otherqty INTEGER DEFAULT 0,
         promo INTEGER DEFAULT 0,
-        pending INTEGER DEFAULT 0,   -- 0 = synced, 1 = needs upload
-        deleted INTEGER DEFAULT 0    -- 0 = active, 1 = deleted locally (soft delete)
-        
+        pending INTEGER DEFAULT 0   -- NEW COLUMN
       )
     ''');
 
@@ -54,8 +52,7 @@ class AppDB {
         total INTEGER,
         promoDiscount INTEGER DEFAULT 0,
         date TEXT,
-        pending INTEGER DEFAULT 0,
-        deleted INTEGER DEFAULT 0
+        pending INTEGER DEFAULT 0
       )
     ''');
 
@@ -72,11 +69,11 @@ class AppDB {
     await db.insert('users', {
       'username': 'admin',
       'password': 'admin123',
-      'role': 'admin'
+      'role': 'admin',
     });
 
     // Auto sync after create
-    // SyncService.instance.syncAll();
+    SyncService.instance.syncAll();
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -103,11 +100,15 @@ class AppDB {
     }
 
     if (oldVersion < 4) {
-      await db.execute('ALTER TABLE products ADD COLUMN otherqty INTEGER DEFAULT 0');
+      await db.execute(
+        'ALTER TABLE products ADD COLUMN otherqty INTEGER DEFAULT 0',
+      );
     }
 
     if (oldVersion < 5) {
-      await db.execute('ALTER TABLE products ADD COLUMN promo INTEGER DEFAULT 0');
+      await db.execute(
+        'ALTER TABLE products ADD COLUMN promo INTEGER DEFAULT 0',
+      );
     }
 
     if (oldVersion < 6) {
@@ -121,35 +122,33 @@ class AppDB {
       ''');
 
       // In _onUpgrade (for older versions)
-if (oldVersion < 7) {
-  // Add missing columns safely - wrap in try/catch because SQLite will throw if column already exists
-  try {
-    await db.execute('ALTER TABLE products ADD COLUMN pending INTEGER DEFAULT 0');
-  } catch (_) {}
-  try {
-    await db.execute('ALTER TABLE products ADD COLUMN deleted INTEGER DEFAULT 0');
-  } catch (_) {}
-  try {
-    await db.execute('ALTER TABLE sales ADD COLUMN pending INTEGER DEFAULT 0');
-  } catch (_) {}
-  try {
-    await db.execute('ALTER TABLE sales ADD COLUMN deleted INTEGER DEFAULT 0');
-  } catch (_) {}
-}
+      if (oldVersion < 7) {
+        await db.execute(
+          'ALTER TABLE products ADD COLUMN pending INTEGER DEFAULT 0',
+        );
+      }
 
-      final count = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM users'));
+      if (oldVersion < 8) {
+        await db.execute(
+          'ALTER TABLE sales ADD COLUMN pending INTEGER DEFAULT 0',
+        );
+      }
+
+      final count = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM users'),
+      );
 
       if (count == 0) {
         await db.insert('users', {
           'username': 'admin',
           'password': 'admin123',
-          'role': 'admin'
+          'role': 'admin',
         });
       }
     }
 
     // Auto sync on upgrade
-    // SyncService.instance.syncAll();
+    SyncService.instance.syncAll();
   }
 
   Future close() async {
@@ -161,20 +160,20 @@ if (oldVersion < 7) {
 
   // Products
   Future<int> insertProduct(Product product) async {
-  final db = await instance.database;
-  final id = await db.insert('products', {
-    'name': product.name,
-    'price': product.price.toInt(),
-    'qty': product.qty,
-    'otherqty': product.otherqty,
-    'promo': product.promo ? 1 : 0,
-    'pending': 1,
-    'deleted': 0,
-  });
-  // optionally trigger immediate sync: SyncService.instance.syncAll();
-  return id;
-}
+    final db = await instance.database;
 
+    final id = await db.insert('products', {
+      'name': product.name,
+      'price': product.price.toInt(),
+      'qty': product.qty,
+      'otherqty': product.otherqty,
+      'promo': product.promo ? 1 : 0,
+      'pending': 1, // 1 = new/pending insert
+    });
+
+    SyncService.instance.syncAll();
+    return id;
+  }
 
   Future<List<Product>> fetchProducts() async {
     final db = await instance.database;
@@ -193,90 +192,61 @@ if (oldVersion < 7) {
   }
 
   Future<void> updateProduct(Product product) async {
-  final db = await instance.database;
-  await db.update(
-    'products',
-    {
-      'name': product.name,
-      'price': product.price.toInt(),
-      'qty': product.qty,
-      'otherqty': product.otherqty,
-      'promo': product.promo ? 1 : 0,
-      'pending': 1, // mark changed
-    },
-    where: 'id = ?',
-    whereArgs: [product.id],
-  );
-}
+    final db = await instance.database;
 
-Future<void> updateSale(Sale sale) async {
-  final db = await instance.database;
-  await db.update(
-    'sales',
-    {
+    await db.update(
+      'products',
+      {
+        'name': product.name,
+        'price': product.price.toInt(),
+        'qty': product.qty,
+        'otherqty': product.otherqty,
+        'promo': product.promo ? 1 : 0,
+        'pending': 1, // 1 = pending update
+      },
+      where: 'id = ?',
+      whereArgs: [product.id],
+    );
+
+    SyncService.instance.syncAll();
+  }
+
+  Future<void> seedDefaultProducts() async {
+    // No default products inserted
+    print("No default products seeded");
+  }
+
+  // Delete product locally and mark as pending for sync
+  Future<void> deleteProduct(int productId) async {
+    final db = await instance.database;
+
+    // Mark as pending delete (2) instead of removing immediately
+    await db.update(
+      'products',
+      {'pending': 2}, // 2 = pending delete
+      where: 'id = ?',
+      whereArgs: [productId],
+    );
+
+    SyncService.instance.syncAll();
+  }
+
+  // Sales
+  Future<int> insertSale(Sale sale) async {
+    final db = await instance.database;
+
+    final id = await db.insert('sales', {
       'productName': sale.productName,
       'qty': sale.qty,
       'price': sale.price,
       'total': sale.total,
       'promoDiscount': sale.promoDiscount ?? 0,
       'date': sale.date,
-      'pending': sale.pending ?? 0,  // Sale model must include pending
-      'deleted': sale.deleted ?? 0,
-    },
-    where: 'id = ?',
-    whereArgs: [sale.id],
-  );
-}
+    });
 
-Future<void> softDeleteProduct(int productId) async {
-  final db = await instance.database;
-  await db.update(
-    'products',
-    {'deleted': 1, 'pending': 1},
-    where: 'id = ?',
-    whereArgs: [productId],
-  );
-}
-
-
-
-Future<void> seedDefaultProducts() async {
-  // No default products inserted
-  print("No default products seeded");
-}
-
-
-  // Delete product locally and mark as pending for sync
-Future<void> deleteProduct(int productId) async {
-  final db = await instance.database;
-
-  // Mark as pending delete (2) instead of removing immediately
-  await db.update(
-    'products',
-    {'pending': 2}, // 2 = pending delete
-    where: 'id = ?',
-    whereArgs: [productId],
-  );
-
-    // SyncService.instance.syncAll();
+    SyncService.instance.syncAll();
+    return id;
   }
-
-  // Sales
-  Future<int> insertSale(Sale sale) async {
-  final db = await instance.database;
-  final id = await db.insert('sales', {
-    'productName': sale.productName,
-    'qty': sale.qty,
-    'price': sale.price,
-    'total': sale.total,
-    'promoDiscount': sale.promoDiscount ?? 0,
-    'date': sale.date,
-    'pending': 1,
-    'deleted': 0,
-  });
-  return id;
-}
-
 
   Future<List<Sale>> fetchAllSales() async {
     final db = await instance.database;
@@ -288,13 +258,9 @@ Future<void> deleteProduct(int productId) async {
   Future<int> deleteSale(int id) async {
     final db = await instance.database;
 
-    final result = await db.delete(
-      'sales',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final result = await db.delete('sales', where: 'id = ?', whereArgs: [id]);
 
-    // SyncService.instance.syncAll();
+    SyncService.instance.syncAll();
     return result;
   }
 
@@ -319,10 +285,10 @@ Future<void> deleteProduct(int productId) async {
     final id = await db.insert('users', {
       'username': username,
       'password': password,
-      'role': role
+      'role': role,
     });
 
-    // SyncService.instance.syncAll();
+    SyncService.instance.syncAll();
     return id;
   }
 

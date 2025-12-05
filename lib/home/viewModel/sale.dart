@@ -7,7 +7,7 @@ class Sale {
   int total;
   String date;
   int pending; // 0 or 1
-  int deleted; // 0 or 1
+ 
 
 
   Sale({
@@ -19,7 +19,7 @@ class Sale {
     this.promoDiscount = 0,   // ⭐ DEFAULT VALUE
     required this.date,
     this.pending = 0,
-    this.deleted = 0,
+
   });
 
   // Convert Sale object to Map for database

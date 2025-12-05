@@ -62,23 +62,27 @@ class SyncService {
   // START AUTO-SYNC
   // --------------------------
   void startAutoSync({int intervalSeconds = 30}) {
-  // 1️⃣ Periodic sync
-  _timer = Timer.periodic(Duration(seconds: intervalSeconds), (_) async {
-    if (await _isOnline()) {
-      await syncAll();
+    // Periodic timer
+    _timer = Timer.periodic(Duration(seconds: intervalSeconds), (_) async {
+      if (await _isOnline()) await syncAll();
+    });
+
+    // Connectivity listener
+    Connectivity().onConnectivityChanged.listen((status) async {
+      if (status != ConnectivityResult.none) await syncAll();
+    });
+
+    print("AUTO SYNC STARTED ⏱️");
+  }
+
+  // ---------------- STOP AUTO-SYNC ----------------
+  void stopAutoSync() {
+    if (_timer != null) {
+      _timer!.cancel();
+      _timer = null;
+      print("AUTO SYNC STOPPED ⏹️");
     }
-  });
-
-  // 2️⃣ Listen for connectivity changes
-  Connectivity().onConnectivityChanged.listen((status) async {
-    if (status != ConnectivityResult.none) {
-      await syncAll();
-    }
-  });
-
-  print("AUTO SYNC STARTED ⏱️");
-}
-
+  }
 
   // --------------------------
   // SYNC EVERYTHING

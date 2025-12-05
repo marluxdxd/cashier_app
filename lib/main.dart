@@ -1,3 +1,4 @@
+import 'package:cashier_app/home/view/home_admin.dart';
 import 'package:cashier_app/home/view/home_user.dart';
 import 'package:cashier_app/home/viewModel/sync_status.dart';
 import 'package:flutter/material.dart';
@@ -24,9 +25,6 @@ void main() async {
   );
 }
 
-
-
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -40,7 +38,7 @@ class MyApp extends StatelessWidget {
      
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: UserView(),
+      home: TestView1(),
     );
   }          
 }
